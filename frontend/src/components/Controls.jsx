@@ -23,7 +23,7 @@ function Controls({
 }) {
   return (
     <div className="controls-container">
-      <div className="control-group">
+      <div className="control-group compact">
         <label>Dataset:</label>
         <select value={currentDataset} onChange={(e) => setDataset(e.target.value)}>
           {datasets.map(d => (
@@ -53,13 +53,65 @@ function Controls({
         </div>
       </div>
 
-      <div className="control-group">
+      <div className="control-group compact">
         <label>Axis:</label>
         <select value={axis} onChange={(e) => setAxis(e.target.value)}>
           <option value="x">X</option>
           <option value="y">Y</option>
           <option value="z">Z</option>
         </select>
+      </div>
+
+      <div className="control-group compact">
+        <label>Field:</label>
+        <select value={field} onChange={(e) => setField(e.target.value)}>
+          {fieldsList.map(f => (
+            <option key={f} value={f}>{f}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="control-group compact">
+        <label>Colormap:</label>
+        <select value={cmap} onChange={(e) => setCmap(e.target.value)}>
+          <option value="viridis">Viridis</option>
+          <option value="plasma">Plasma</option>
+          <option value="inferno">Inferno</option>
+          <option value="magma">Magma</option>
+          <option value="cividis">Cividis</option>
+          <option value="coolwarm">Coolwarm</option>
+          <option value="RdBu">RdBu</option>
+          <option value="seismic">Seismic</option>
+          <option value="jet">Jet</option>
+          <option value="hot">Hot</option>
+          <option value="gray">Gray</option>
+        </select>
+      </div>
+
+      <div className="control-group">
+        <label>Limits (Min / Max):</label>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontWeight: 'normal', fontSize: '0.9rem' }}>Min:</label>
+            <input type="number" value={vmin} onChange={(e) => setVmin(e.target.value)} placeholder="Auto" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontWeight: 'normal', fontSize: '0.9rem' }}>Max:</label>
+            <input type="number" value={vmax} onChange={(e) => setVmax(e.target.value)} placeholder="Auto" />
+          </div>
+        </div>
+      </div>
+
+      <div className="control-group">
+        <label>
+          <input 
+            type="checkbox" 
+            checked={logScale} 
+            onChange={(e) => setLogScale(e.target.checked)} 
+            style={{ width: 'auto', marginRight: '0.5rem' }}
+          />
+          Log Scale
+        </label>
       </div>
 
       <div className="control-group">
@@ -130,33 +182,7 @@ function Controls({
         )}
       </div>
 
-      <div className="control-group">
-        <label>
-          <input 
-            type="checkbox" 
-            checked={logScale} 
-            onChange={(e) => setLogScale(e.target.checked)} 
-            style={{ width: 'auto', marginRight: '0.5rem' }}
-          />
-          Log Scale
-        </label>
-      </div>
-
-      <div className="control-group">
-        <label>Limits (Min / Max):</label>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ fontWeight: 'normal', fontSize: '0.9rem' }}>Min:</label>
-            <input type="number" value={vmin} onChange={(e) => setVmin(e.target.value)} placeholder="Auto" />
-          </div>
-          <div style={{ flex: 1 }}>
-            <label style={{ fontWeight: 'normal', fontSize: '0.9rem' }}>Max:</label>
-            <input type="number" value={vmax} onChange={(e) => setVmax(e.target.value)} placeholder="Auto" />
-          </div>
-        </div>
-      </div>
-
-      <div className="control-group">
+      <div className="control-group compact">
         <label>DPI:</label>
         <input 
           type="number" 
@@ -165,45 +191,6 @@ function Controls({
           step="10"
         />
       </div>
-
-      <div className="control-group">
-        <label>Field:</label>
-        <select value={field} onChange={(e) => setField(e.target.value)}>
-          {fieldsList.map(f => (
-            <option key={f} value={f}>{f}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="control-group">
-        <label>Colormap:</label>
-        <select value={cmap} onChange={(e) => setCmap(e.target.value)}>
-          <option value="viridis">Viridis</option>
-          <option value="plasma">Plasma</option>
-          <option value="inferno">Inferno</option>
-          <option value="magma">Magma</option>
-          <option value="cividis">Cividis</option>
-          <option value="coolwarm">Coolwarm</option>
-          <option value="RdBu">RdBu</option>
-          <option value="seismic">Seismic</option>
-          <option value="jet">Jet</option>
-          <option value="hot">Hot</option>
-          <option value="gray">Gray</option>
-        </select>
-      </div>
-
-      {/* 
-      <div className="control-group">
-        <label>Coordinate:</label>
-        <input 
-          type="number" 
-          step="0.01"
-          value={coord || ''} 
-          onChange={(e) => setCoord(e.target.value ? parseFloat(e.target.value) : null)} 
-          placeholder="Center"
-        />
-      </div>
-      */}
       
       <button onClick={onRefresh}>Refresh</button>
     </div>

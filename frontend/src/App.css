@@ -71,6 +71,33 @@
   border: 1px solid #ccc;
 }
 
+.control-group.compact {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.control-group.compact label {
+  margin-bottom: 0;
+  white-space: nowrap;
+  min-width: 60px;
+  text-align: right;
+}
+
+/* Hide spin buttons */
+/* Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 .animation-controls {
   display: flex;
   gap: 0.5rem;
