@@ -1,0 +1,5 @@
+yt
+fastapi
+uvicorn
+numpy
+matplotlib
