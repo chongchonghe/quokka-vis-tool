@@ -85,37 +85,34 @@ function App() {
 
   return (
     <div className="app-container">
-      <header>
-        <h1>AMReX Viz Tool</h1>
-        {datasetInfo && <span className="dataset-info">Dataset: {datasetInfo.message}</span>}
-      </header>
-      
-      <main>
-        <div className="sidebar">
-          <Controls 
-            axis={axis} setAxis={setAxis}
-            field={field} setField={setField}
-            fieldsList={fieldsList}
-            coord={coord} setCoord={setCoord}
-            onRefresh={handleRefresh}
-            datasets={datasets}
-            currentDataset={currentDataset}
-            setDataset={loadDataset}
-            isPlaying={isPlaying}
-            setIsPlaying={setIsPlaying}
-            fps={fps}
-            setFps={setFps}
-          />
+      <div className="sidebar">
+        <div className="sidebar-header">
+          <h1>AMReX Viz Tool</h1>
+          {datasetInfo && <span className="dataset-info">Dataset: {datasetInfo.message}</span>}
         </div>
-        <div className="main-content">
-          <Viewer 
-            axis={axis} 
-            field={field} 
-            coord={coord} 
-            refreshTrigger={refreshTrigger}
-          />
-        </div>
-      </main>
+        <Controls 
+          axis={axis} setAxis={setAxis}
+          field={field} setField={setField}
+          fieldsList={fieldsList}
+          coord={coord} setCoord={setCoord}
+          onRefresh={handleRefresh}
+          datasets={datasets}
+          currentDataset={currentDataset}
+          setDataset={loadDataset}
+          isPlaying={isPlaying}
+          setIsPlaying={setIsPlaying}
+          fps={fps}
+          setFps={setFps}
+        />
+      </div>
+      <div className="main-content">
+        <Viewer 
+          axis={axis} 
+          field={field} 
+          coord={coord} 
+          refreshTrigger={refreshTrigger}
+        />
+      </div>
     </div>
   )
 }
