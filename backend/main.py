@@ -245,8 +245,8 @@ def get_slice(
                 except:
                     label = field
             
-            # Set font size for colorbar
-            cbar.ax.tick_params(labelsize=FONT_SIZE)
+            # Set font size for colorbar (ticks at 80% of FONT_SIZE)
+            cbar.ax.tick_params(labelsize=int(FONT_SIZE * 0.8))
             cbar.set_label(label, size=FONT_SIZE)
             
             if show_scale_bar:
