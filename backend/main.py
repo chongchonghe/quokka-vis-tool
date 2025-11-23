@@ -8,6 +8,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -116,7 +117,13 @@ def get_slice(
             norm = matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax) if log_scale else matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
             
             im = ax.imshow(image_data, origin='lower', cmap='viridis', norm=norm)
-            cbar = fig.colorbar(im, ax=ax)
+            
+            # Create divider for existing axes instance
+            divider = make_axes_locatable(ax)
+            # Append axes to the right of ax, with 5% width and 5% padding
+            cax = divider.append_axes("right", size="5%", pad=0.05)
+            
+            cbar = fig.colorbar(im, cax=cax)
             
             # Set colorbar label
             if colorbar_label:
