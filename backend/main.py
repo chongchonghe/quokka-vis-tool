@@ -117,6 +117,7 @@ def get_slice(
     SHORT_SIZE = config.get("short_size", 3.6)
     FONT_SIZE = config.get("font_size", 10)
     SCALE_BAR_HEIGHT_FRACTION = config.get("scale_bar_height_fraction", 15)
+    COLORMAP_FRACTION = config.get("colormap_fraction", 0.1)
     # Note: dpi argument comes from request, but default_dpi in config could be used if we wanted to override the frontend's default?
     # The frontend sends a dpi value (defaulting to 300 or whatever is in state).
     # If we want to enforce config default_dpi when frontend sends 300 (which is its default), it's tricky.
@@ -146,7 +147,6 @@ def get_slice(
         # Calculate resolution (nx, ny) based on SHORT_SIZE and DPI
         # SHORT_SIZE is in inches.
         short_pixels = int(SHORT_SIZE * dpi)
-        
         if aspect > 1:
             # Height > Width. Width is short side.
             nx = short_pixels
@@ -159,6 +159,7 @@ def get_slice(
             nx = int(short_pixels / aspect)
             fig_height = SHORT_SIZE
             fig_width = SHORT_SIZE / aspect
+
             
         slc.set_buff_size((nx, ny))
         
@@ -227,14 +228,14 @@ def get_slice(
             divider = make_axes_locatable(ax)
             
             if colorbar_orientation == 'top':
-                cax = divider.append_axes("top", size="5%", pad=0.05)
+                cax = divider.append_axes("top", size=f"{COLORMAP_FRACTION*100}%", pad=0.05)
                 cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
                 cax.xaxis.set_ticks_position("top")
                 cax.xaxis.set_label_position("top")
             else:
                 # Default to right
-                cax = divider.append_axes("right", size="5%", pad=0.05)
-                cbar = fig.colorbar(im, cax=cax, orientation="vertical")
+                cax = divider.append_axes("right", size=f"{COLORMAP_FRACTION*100}%", pad=0.05)
+            cbar = fig.colorbar(im, cax=cax, orientation="vertical")
             
             # Set colorbar label
             if colorbar_label:
