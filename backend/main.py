@@ -67,7 +67,10 @@ def get_fields():
 def get_slice(
     axis: str = "z", 
     field: str = "density", 
-    coord: Optional[float] = None
+    coord: Optional[float] = None,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    show_colorbar: bool = False
 ):
     global ds
     if ds is None:
@@ -77,18 +80,7 @@ def get_slice(
         if coord is None:
             coord = ds.domain_center[ds.coordinates.axis_id[axis]]
         
-        # field comes in as just the name, e.g. "gasDensity"
-        # we assume it's a boxlib field
         slc = yt.SlicePlot(ds, axis, ("boxlib", field), center=ds.domain_center)
-        # We might want to set the center to the specific coordinate if provided, 
-        # but SlicePlot takes 'center' as the center of the plot window. 
-        # To slice at a specific coordinate along the normal, we usually pass it as the third arg to SlicePlot 
-        # OR we can just use the default center which usually cuts through the middle.
-        # For now, let's stick to simple center slice.
-        
-        # Convert to image buffer
-        # This is a bit hacky to get the raw image data out quickly for a prototype
-        # Ideally we'd use frb (Fixed Resolution Buffer)
         
         # Calculate aspect ratio and set buffer size
         axis_id = ds.coordinates.axis_id[axis]
@@ -112,9 +104,22 @@ def get_slice(
         frb = slc.frb
         image_data = np.array(frb[("boxlib", field)])
         
-        # Save directly using imsave to preserve aspect ratio and avoid borders
         buf = io.BytesIO()
-        plt.imsave(buf, image_data, cmap='viridis', origin='lower', format='png')
+        
+        if show_colorbar:
+            # Use matplotlib figure to show colorbar
+            # Note: This might introduce some whitespace/borders compared to imsave
+            fig = plt.figure(figsize=(8, 8/aspect if aspect < 1 else 8))
+            ax = fig.add_subplot(111)
+            im = ax.imshow(image_data, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+            fig.colorbar(im, ax=ax)
+            ax.axis('off')
+            plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0.1)
+            plt.close(fig)
+        else:
+            # Save directly using imsave to preserve aspect ratio and avoid borders
+            plt.imsave(buf, image_data, cmap='viridis', origin='lower', format='png', vmin=vmin, vmax=vmax)
+            
         buf.seek(0)
         
         return Response(content=buf.getvalue(), media_type="image/png")

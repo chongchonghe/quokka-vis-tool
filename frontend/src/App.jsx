@@ -16,6 +16,9 @@ function App() {
   const [currentDataset, setCurrentDataset] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
   const [fps, setFps] = useState(1);
+  const [showColorbar, setShowColorbar] = useState(false);
+  const [vmin, setVmin] = useState('');
+  const [vmax, setVmax] = useState('');
 
   useEffect(() => {
     // Load initial data
@@ -101,6 +104,12 @@ function App() {
           setIsPlaying={setIsPlaying}
           fps={fps}
           setFps={setFps}
+          showColorbar={showColorbar}
+          setShowColorbar={setShowColorbar}
+          vmin={vmin}
+          setVmin={setVmin}
+          vmax={vmax}
+          setVmax={setVmax}
         />
       </div>
       <div className="main-content">
@@ -109,6 +118,9 @@ function App() {
           field={field} 
           coord={coord} 
           refreshTrigger={refreshTrigger}
+          showColorbar={showColorbar}
+          vmin={vmin}
+          vmax={vmax}
         />
       </div>
     </div>

@@ -8,8 +8,10 @@ function Controls({
   onRefresh,
   datasets, currentDataset, setDataset,
   isPlaying, setIsPlaying,
-
-  fps, setFps
+  fps, setFps,
+  showColorbar, setShowColorbar,
+  vmin, setVmin,
+  vmax, setVmax
 }) {
   return (
     <div className="controls-container">
@@ -50,6 +52,36 @@ function Controls({
           <option value="y">Y</option>
           <option value="z">Z</option>
         </select>
+      </div>
+
+      <div className="control-group">
+        <label>
+          <input 
+            type="checkbox" 
+            checked={showColorbar} 
+            onChange={(e) => setShowColorbar(e.target.checked)} 
+            style={{ width: 'auto', marginRight: '0.5rem' }}
+          />
+          Show Colorbar
+        </label>
+      </div>
+
+      <div className="control-group">
+        <label>Limits (Min / Max):</label>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <input 
+            type="text" 
+            value={vmin} 
+            onChange={(e) => setVmin(e.target.value)} 
+            placeholder="Min"
+          />
+          <input 
+            type="text" 
+            value={vmax} 
+            onChange={(e) => setVmax(e.target.value)} 
+            placeholder="Max"
+          />
+        </div>
       </div>
 
       <div className="control-group">
