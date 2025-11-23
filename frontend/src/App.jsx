@@ -29,6 +29,10 @@ function App() {
   const [cmap, setCmap] = useState('viridis');
   const [resolution, setResolution] = useState(512);
   const [showScaleBar, setShowScaleBar] = useState(false);
+  const [scaleBarSize, setScaleBarSize] = useState('');
+  const [scaleBarUnit, setScaleBarUnit] = useState('');
+  const [appliedScaleBarSize, setAppliedScaleBarSize] = useState('');
+  const [appliedScaleBarUnit, setAppliedScaleBarUnit] = useState('');
 
   useEffect(() => {
     // Load initial data
@@ -95,6 +99,8 @@ function App() {
     setAppliedVmax(vmax);
     setAppliedColorbarLabel(colorbarLabel);
     setAppliedColorbarOrientation(colorbarOrientation);
+    setAppliedScaleBarSize(scaleBarSize);
+    setAppliedScaleBarUnit(scaleBarUnit);
     setRefreshTrigger(prev => prev + 1);
   };
 
@@ -136,6 +142,10 @@ function App() {
           setResolution={setResolution}
           showScaleBar={showScaleBar}
           setShowScaleBar={setShowScaleBar}
+          scaleBarSize={scaleBarSize}
+          setScaleBarSize={setScaleBarSize}
+          scaleBarUnit={scaleBarUnit}
+          setScaleBarUnit={setScaleBarUnit}
         />
       </div>
       <div className="main-content">
@@ -153,6 +163,8 @@ function App() {
           cmap={cmap}
           resolution={resolution}
           showScaleBar={showScaleBar}
+          scaleBarSize={appliedScaleBarSize}
+          scaleBarUnit={appliedScaleBarUnit}
         />
       </div>
     </div>

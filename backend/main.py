@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import Response
 import yt
+import unyt
 import os
 from typing import List, Optional
 import io
@@ -79,11 +80,18 @@ def get_slice(
     colorbar_orientation: str = "right",
     cmap: str = "viridis",
     resolution: int = 512,
-    show_scale_bar: bool = False
+    show_scale_bar: bool = False,
+    scale_bar_size: Optional[float] = None,
+    scale_bar_unit: Optional[str] = None
 ):
     global ds
     if ds is None:
         raise HTTPException(status_code=400, detail="No dataset loaded")
+    
+    # Debug logging
+    import sys
+    print(f"DEBUG: scale_bar_size={scale_bar_size}, scale_bar_unit={scale_bar_unit}, show_scale_bar={show_scale_bar}")
+    sys.stdout.flush()
     
     try:
         if coord is None:
@@ -151,31 +159,66 @@ def get_slice(
             
             # Add scale bar if requested
             if show_scale_bar:
-                # Calculate scale bar size (1/5 of image width)
+                print(f"DEBUG: Inside show_scale_bar block")
+                # Get axis information
                 axis_id = ds.coordinates.axis_id[axis]
                 x_ax_id = ds.coordinates.x_axis[axis_id]
-                width_with_units = ds.domain_width[x_ax_id]
-                width_value = float(width_with_units.v)
-                units = str(width_with_units.units)
+                domain_width = ds.domain_width[x_ax_id]
                 
-                # Scale bar size: 1/5 of domain width
-                scale_size = width_value / 5.0
+                print(f"DEBUG: domain_width={domain_width}")
+                print(f"DEBUG: scale_bar_size={scale_bar_size}, scale_bar_unit={scale_bar_unit}")
+                print(f"DEBUG: Condition check: {scale_bar_size is not None and scale_bar_unit is not None}")
                 
-                # Round to a nice number
-                magnitude = 10 ** np.floor(np.log10(scale_size))
-                nice_scale = np.round(scale_size / magnitude) * magnitude
+                # Use custom scale bar size if provided, otherwise auto-calculate
+                if scale_bar_size is not None and scale_bar_unit is not None:
+                    print(f"DEBUG: Using custom scale bar")
+                    # Convert custom unit to box length (fraction of domain width) using yt.YTQuantity
+                    try:
+                        # Create a YTQuantity from the user input
+                        custom_quantity = yt.YTQuantity(scale_bar_size, scale_bar_unit)
+                        print(f"DEBUG: Created custom_quantity: {custom_quantity}")
+                        
+                        # Convert to fraction of domain width (box length units)
+                        # This is the key: divide by domain_width to get normalized units
+                        box_length_fraction = float(custom_quantity / domain_width)
+                        print(f"DEBUG: box_length_fraction: {box_length_fraction}")
+                        
+                        # Display label uses the user's specified unit
+                        display_label = f'{scale_bar_size:.3g} {scale_bar_unit}'
+                        print(f"DEBUG: display_label={display_label}")
+                    except Exception as e:
+                        # If conversion fails, fall back to auto-calculation
+                        print(f"Warning: Could not convert {scale_bar_size} {scale_bar_unit}: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        box_length_fraction = 0.2  # Default to 1/5 of domain
+                        display_label = f'{0.2 * float(domain_width.v):.3g} {domain_width.units}'
+                else:
+                    print(f"DEBUG: Using auto-calculated scale bar")
+                    # Auto-calculate: 1/5 of domain width
+                    box_length_fraction = 0.2
+                    scale_value = 0.2 * float(domain_width.v)
+                    
+                    # Round to a nice number
+                    magnitude = 10 ** np.floor(np.log10(scale_value))
+                    nice_scale = np.round(scale_value / magnitude) * magnitude
+                    
+                    # Recalculate box_length_fraction with the rounded value
+                    box_length_fraction = nice_scale / float(domain_width.v)
+                    display_label = f'{nice_scale:.3g} {domain_width.units}'
+                    print(f"DEBUG: Auto box_length_fraction={box_length_fraction}, display_label={display_label}")
                 
-                # Convert physical size to pixel size
-                # The image has nx pixels spanning width_value physical units
-                pixels_per_unit = nx / width_value
-                scale_bar_pixels = nice_scale * pixels_per_unit
+                # Convert box length fraction to pixel size
+                # The image has nx pixels spanning the full domain (box length = 1.0)
+                scale_bar_pixels = box_length_fraction * nx
+                print(f"DEBUG: scale_bar_pixels={scale_bar_pixels}")
                 
                 # Create scale bar
                 fontprops = fm.FontProperties(size=10, weight='bold')
                 scalebar = AnchoredSizeBar(
                     ax.transData,
                     scale_bar_pixels,
-                    f'{nice_scale:.3g} {units}',
+                    display_label,
                     'lower left',
                     pad=0.5,
                     color='white',
@@ -218,29 +261,44 @@ def get_slice(
                 ax = fig.add_subplot(111)
                 ax.imshow(colored_data, origin='lower', aspect='auto')
                 
-                # Calculate scale bar size
-                width_with_units = ds.domain_width[x_ax_id]
-                width_value = float(width_with_units.v)
-                units = str(width_with_units.units)
+                # Get scale bar size and unit
+                axis_id = ds.coordinates.axis_id[axis]
+                x_ax_id = ds.coordinates.x_axis[axis_id]
+                domain_width = ds.domain_width[x_ax_id]
                 
-                # Scale bar size: 1/5 of domain width
-                scale_size = width_value / 5.0
+                # Use custom scale bar size if provided, otherwise auto-calculate
+                if scale_bar_size is not None and scale_bar_unit is not None:
+                    # Convert custom unit to box length (fraction of domain width) using yt.YTQuantity
+                    try:
+                        custom_quantity = yt.YTQuantity(scale_bar_size, scale_bar_unit)
+                        box_length_fraction = float(custom_quantity / domain_width)
+                        display_label = f'{scale_bar_size:.3g} {scale_bar_unit}'
+                    except Exception as e:
+                        print(f"Warning: Could not convert {scale_bar_size} {scale_bar_unit}: {e}")
+                        box_length_fraction = 0.2
+                        display_label = f'{0.2 * float(domain_width.v):.3g} {domain_width.units}'
+                else:
+                    # Auto-calculate: 1/5 of domain width
+                    box_length_fraction = 0.2
+                    scale_value = 0.2 * float(domain_width.v)
+                    
+                    # Round to a nice number
+                    magnitude = 10 ** np.floor(np.log10(scale_value))
+                    nice_scale = np.round(scale_value / magnitude) * magnitude
+                    
+                    # Recalculate box_length_fraction with the rounded value
+                    box_length_fraction = nice_scale / float(domain_width.v)
+                    display_label = f'{nice_scale:.3g} {domain_width.units}'
                 
-                # Round to a nice number
-                magnitude = 10 ** np.floor(np.log10(scale_size))
-                nice_scale = np.round(scale_size / magnitude) * magnitude
-                
-                # Convert physical size to pixel size
-                # The image has nx pixels spanning width_value physical units
-                pixels_per_unit = nx / width_value
-                scale_bar_pixels = nice_scale * pixels_per_unit
+                # Convert box length fraction to pixel size
+                scale_bar_pixels = box_length_fraction * nx
                 
                 # Create scale bar
                 fontprops = fm.FontProperties(size=10, weight='bold')
                 scalebar = AnchoredSizeBar(
                     ax.transData,
                     scale_bar_pixels,
-                    f'{nice_scale:.3g} {units}',
+                    display_label,
                     'lower left',
                     pad=0.5,
                     color='white',

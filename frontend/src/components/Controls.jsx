@@ -17,7 +17,9 @@ function Controls({
   colorbarOrientation, setColorbarOrientation,
   cmap, setCmap,
   resolution, setResolution,
-  showScaleBar, setShowScaleBar
+  showScaleBar, setShowScaleBar,
+  scaleBarSize, setScaleBarSize,
+  scaleBarUnit, setScaleBarUnit
 }) {
   return (
     <div className="controls-container">
@@ -70,24 +72,6 @@ function Controls({
           />
           Show Colorbar
         </label>
-        <label style={{ marginTop: '0.5rem' }}>
-          <input 
-            type="checkbox" 
-            checked={showScaleBar} 
-            onChange={(e) => setShowScaleBar(e.target.checked)} 
-            style={{ width: 'auto', marginRight: '0.5rem' }}
-          />
-          Show Scale Bar
-        </label>
-        <label style={{ marginTop: '0.5rem' }}>
-          <input 
-            type="checkbox" 
-            checked={logScale} 
-            onChange={(e) => setLogScale(e.target.checked)} 
-            style={{ width: 'auto', marginRight: '0.5rem' }}
-          />
-          Log Scale
-        </label>
         {showColorbar && (
           <div style={{ marginTop: '0.5rem' }}>
             <label style={{ fontWeight: 'normal', fontSize: '0.9rem' }}>Label:</label>
@@ -109,6 +93,53 @@ function Controls({
             </select>
           </div>
         )}
+      </div>
+
+      <div className="control-group">
+        <label>
+          <input 
+            type="checkbox" 
+            checked={showScaleBar} 
+            onChange={(e) => setShowScaleBar(e.target.checked)} 
+            style={{ width: 'auto', marginRight: '0.5rem' }}
+          />
+          Show Scale Bar
+        </label>
+        {showScaleBar && (
+          <div style={{ marginTop: '0.5rem', paddingLeft: '1.5rem' }}>
+            <label style={{ fontWeight: 'normal', fontSize: '0.9rem', display: 'block', marginBottom: '0.25rem' }}>
+              Custom Size (optional):
+            </label>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <input 
+                type="text" 
+                value={scaleBarSize} 
+                onChange={(e) => setScaleBarSize(e.target.value)} 
+                placeholder="Auto"
+                style={{ width: '80px' }}
+              />
+              <input 
+                type="text" 
+                value={scaleBarUnit} 
+                onChange={(e) => setScaleBarUnit(e.target.value)} 
+                placeholder="Unit"
+                style={{ width: '60px' }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="control-group">
+        <label>
+          <input 
+            type="checkbox" 
+            checked={logScale} 
+            onChange={(e) => setLogScale(e.target.checked)} 
+            style={{ width: 'auto', marginRight: '0.5rem' }}
+          />
+          Log Scale
+        </label>
       </div>
 
       <div className="control-group">

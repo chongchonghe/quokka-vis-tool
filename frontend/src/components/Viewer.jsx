@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, cmap, resolution, showScaleBar }) {
+function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, cmap, resolution, showScaleBar, scaleBarSize, scaleBarUnit }) {
   const [imageUrl, setImageUrl] = useState(null);
   const [error, setError] = useState(null);
 
@@ -8,7 +8,7 @@ function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, 
     if (field) {
       fetchImage();
     }
-  }, [axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, cmap, resolution, showScaleBar]);
+  }, [axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, cmap, resolution, showScaleBar, scaleBarSize, scaleBarUnit]);
 
   const fetchImage = async () => {
     setError(null);
@@ -29,6 +29,19 @@ function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, 
       if (colorbarOrientation) {
         url += `&colorbar_orientation=${colorbarOrientation}`;
       }
+      
+      console.log('DEBUG Viewer: scaleBarSize=', scaleBarSize, 'scaleBarUnit=', scaleBarUnit);
+      
+      if (scaleBarSize && scaleBarSize !== '') {
+        console.log('DEBUG Viewer: Adding scale_bar_size to URL:', parseFloat(scaleBarSize));
+        url += `&scale_bar_size=${parseFloat(scaleBarSize)}`;
+      }
+      if (scaleBarUnit && scaleBarUnit !== '') {
+        console.log('DEBUG Viewer: Adding scale_bar_unit to URL:', scaleBarUnit);
+        url += `&scale_bar_unit=${encodeURIComponent(scaleBarUnit)}`;
+      }
+      
+      console.log('DEBUG Viewer: Final URL:', url);
       
       const response = await fetch(url);
       if (!response.ok) {
