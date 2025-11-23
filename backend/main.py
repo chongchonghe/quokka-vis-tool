@@ -17,15 +17,19 @@ import matplotlib.font_manager as fm
 from fastapi.middleware.cors import CORSMiddleware
 
 
-# Load configuration
-config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
-with open(config_path, "r") as f:
-    config = yaml.safe_load(f)
+def load_config():
+    config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+    with open(config_path, "r") as f:
+        return yaml.safe_load(f)
 
-SHORT_SIZE = config.get("short_size", 3.6)
-FONT_SIZE = config.get("font_size", 10)
-SCALE_BAR_HEIGHT_FRACTION = config.get("scale_bar_height_fraction", 15)
-DEFAULT_DPI = config.get("default_dpi", 300)
+# Initial load to set defaults if needed, or just rely on load_config in endpoints
+# We can keep defaults as fallback
+DEFAULT_CONFIG = {
+    "short_size": 3.6,
+    "font_size": 10,
+    "scale_bar_height_fraction": 15,
+    "default_dpi": 300
+}
 
 app = FastAPI()
 
@@ -99,7 +103,7 @@ def get_slice(
     colorbar_label: Optional[str] = None,
     colorbar_orientation: str = "right",
     cmap: str = "viridis",
-    dpi: int = DEFAULT_DPI,
+    dpi: int = 300,
     show_scale_bar: bool = False,
     scale_bar_size: Optional[float] = None,
     scale_bar_unit: Optional[str] = None
@@ -108,6 +112,17 @@ def get_slice(
     if ds is None:
         raise HTTPException(status_code=400, detail="No dataset loaded")
     
+    # Load configuration
+    config = load_config()
+    SHORT_SIZE = config.get("short_size", 3.6)
+    FONT_SIZE = config.get("font_size", 10)
+    SCALE_BAR_HEIGHT_FRACTION = config.get("scale_bar_height_fraction", 15)
+    # Note: dpi argument comes from request, but default_dpi in config could be used if we wanted to override the frontend's default?
+    # The frontend sends a dpi value (defaulting to 300 or whatever is in state).
+    # If we want to enforce config default_dpi when frontend sends 300 (which is its default), it's tricky.
+    # But the user said "adjust DPI in the GUI". So GUI wins.
+    # We just use config for the other params.
+
     # Debug logging
     import sys
     print(f"DEBUG: scale_bar_size={scale_bar_size}, scale_bar_unit={scale_bar_unit}, show_scale_bar={show_scale_bar}, dpi={dpi}")
