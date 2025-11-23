@@ -78,6 +78,24 @@ main {
   color: #666;
 }
 
+.fps-buttons {
+  display: flex;
+  gap: 2px;
+}
+
+.fps-buttons button {
+  padding: 2px 5px;
+  font-size: 0.8rem;
+  width: auto;
+  background: #eee;
+  color: #333;
+}
+
+.fps-buttons button.active {
+  background: #646cff;
+  color: white;
+}
+
 button {
   width: 100%;
   padding: 0.5rem;

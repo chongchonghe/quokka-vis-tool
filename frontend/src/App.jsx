@@ -15,7 +15,7 @@ function App() {
   const [datasets, setDatasets] = useState([]);
   const [currentDataset, setCurrentDataset] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
-  const [animationSpeed, setAnimationSpeed] = useState(500);
+  const [fps, setFps] = useState(5);
 
   useEffect(() => {
     // Load initial data
@@ -36,10 +36,10 @@ function App() {
         const currentIndex = datasets.indexOf(currentDataset);
         const nextIndex = (currentIndex + 1) % datasets.length;
         loadDataset(datasets[nextIndex]);
-      }, animationSpeed);
+      }, 1000 / fps);
     }
     return () => clearInterval(interval);
-  }, [isPlaying, datasets, currentDataset, animationSpeed]);
+  }, [isPlaying, datasets, currentDataset, fps]);
 
   const fetchDatasets = async () => {
     try {
@@ -101,8 +101,8 @@ function App() {
             setDataset={loadDataset}
             isPlaying={isPlaying}
             setIsPlaying={setIsPlaying}
-            animationSpeed={animationSpeed}
-            setAnimationSpeed={setAnimationSpeed}
+            fps={fps}
+            setFps={setFps}
           />
         </div>
         <div className="main-content">

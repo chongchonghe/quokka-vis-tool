@@ -8,7 +8,8 @@ function Controls({
   onRefresh,
   datasets, currentDataset, setDataset,
   isPlaying, setIsPlaying,
-  animationSpeed, setAnimationSpeed
+
+  fps, setFps
 }) {
   return (
     <div className="controls-container">
@@ -27,15 +28,18 @@ function Controls({
           <button onClick={() => setIsPlaying(!isPlaying)}>
             {isPlaying ? 'Pause' : 'Play'}
           </button>
-          <input 
-            type="range" 
-            min="100" 
-            max="2000" 
-            step="100"
-            value={animationSpeed} 
-            onChange={(e) => setAnimationSpeed(Number(e.target.value))}
-          />
-          <span>{animationSpeed}ms</span>
+
+          <div className="fps-buttons">
+            {[1, 3, 5, 10, 15, 30].map(val => (
+              <button 
+                key={val} 
+                onClick={() => setFps(val)}
+                className={fps === val ? 'active' : ''}
+              >
+                {val}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
