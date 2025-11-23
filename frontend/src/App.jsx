@@ -46,9 +46,7 @@ function App() {
       const res = await fetch('http://localhost:8000/api/datasets');
       const data = await res.json();
       setDatasets(data.datasets);
-      if (data.datasets.length > 0) {
-        setCurrentDataset(data.datasets[0]);
-      }
+      // Don't set currentDataset here, let the useEffect handle it to trigger loadDataset
     } catch (err) {
       console.error("Failed to fetch datasets:", err);
     }
