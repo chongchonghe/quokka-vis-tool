@@ -27,7 +27,7 @@ ds = None
 
 @app.get("/")
 def read_root():
-    return {"message": "AMReX Viz Tool Backend"}
+    return {"message": "QUOKKA Viz Tool Backend"}
 
 @app.get("/api/datasets")
 def get_datasets():

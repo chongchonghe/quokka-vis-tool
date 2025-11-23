@@ -99,7 +99,7 @@ function App() {
     <div className="app-container">
       <div className="sidebar">
         <div className="sidebar-header">
-          <h1>AMReX Viz Tool</h1>
+          <h1>QUOKKA Viz Tool</h1>
           {datasetInfo && <span className="dataset-info">Dataset: {datasetInfo.message}</span>}
         </div>
         <Controls 
