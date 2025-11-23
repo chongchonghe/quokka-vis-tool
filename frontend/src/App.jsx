@@ -19,6 +19,11 @@ function App() {
   const [showColorbar, setShowColorbar] = useState(false);
   const [vmin, setVmin] = useState('');
   const [vmax, setVmax] = useState('');
+  const [appliedVmin, setAppliedVmin] = useState('');
+  const [appliedVmax, setAppliedVmax] = useState('');
+  const [logScale, setLogScale] = useState(true);
+  const [colorbarLabel, setColorbarLabel] = useState('');
+  const [appliedColorbarLabel, setAppliedColorbarLabel] = useState('');
 
   useEffect(() => {
     // Load initial data
@@ -81,6 +86,9 @@ function App() {
   };
 
   const handleRefresh = () => {
+    setAppliedVmin(vmin);
+    setAppliedVmax(vmax);
+    setAppliedColorbarLabel(colorbarLabel);
     setRefreshTrigger(prev => prev + 1);
   };
 
@@ -110,6 +118,10 @@ function App() {
           setVmin={setVmin}
           vmax={vmax}
           setVmax={setVmax}
+          logScale={logScale}
+          setLogScale={setLogScale}
+          colorbarLabel={colorbarLabel}
+          setColorbarLabel={setColorbarLabel}
         />
       </div>
       <div className="main-content">
@@ -119,8 +131,10 @@ function App() {
           coord={coord} 
           refreshTrigger={refreshTrigger}
           showColorbar={showColorbar}
-          vmin={vmin}
-          vmax={vmax}
+          vmin={appliedVmin}
+          vmax={appliedVmax}
+          logScale={logScale}
+          colorbarLabel={appliedColorbarLabel}
         />
       </div>
     </div>

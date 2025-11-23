@@ -70,7 +70,9 @@ def get_slice(
     coord: Optional[float] = None,
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
-    show_colorbar: bool = False
+    show_colorbar: bool = False,
+    log_scale: bool = True,
+    colorbar_label: Optional[str] = None
 ):
     global ds
     if ds is None:
@@ -108,17 +110,46 @@ def get_slice(
         
         if show_colorbar:
             # Use matplotlib figure to show colorbar
-            # Note: This might introduce some whitespace/borders compared to imsave
             fig = plt.figure(figsize=(8, 8/aspect if aspect < 1 else 8))
             ax = fig.add_subplot(111)
-            im = ax.imshow(image_data, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-            fig.colorbar(im, ax=ax)
+            
+            norm = matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax) if log_scale else matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+            
+            im = ax.imshow(image_data, origin='lower', cmap='viridis', norm=norm)
+            cbar = fig.colorbar(im, ax=ax)
+            
+            # Set colorbar label
+            if colorbar_label:
+                label = colorbar_label
+            else:
+                try:
+                    # Try to get the default label from yt field info
+                    label = ds.field_info[("boxlib", field)].get_label()
+                except:
+                    label = field
+            
+            cbar.set_label(label)
+            
             ax.axis('off')
             plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0.1)
             plt.close(fig)
         else:
             # Save directly using imsave to preserve aspect ratio and avoid borders
-            plt.imsave(buf, image_data, cmap='viridis', origin='lower', format='png', vmin=vmin, vmax=vmax)
+            # imsave doesn't support 'norm' directly, so we apply it manually
+            norm = matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax) if log_scale else matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+            
+            # Map data to 0-1 using the norm
+            # We need to handle cases where data might be <= 0 for LogNorm if vmin is not set
+            # But matplotlib's LogNorm usually handles this by masking or clipping if we are careful.
+            # However, calling norm(data) directly might return masked array.
+            
+            mapped_data = norm(image_data)
+            
+            # Apply colormap
+            cm = matplotlib.colormaps['viridis']
+            colored_data = cm(mapped_data)
+            
+            plt.imsave(buf, colored_data, origin='lower', format='png')
             
         buf.seek(0)
         

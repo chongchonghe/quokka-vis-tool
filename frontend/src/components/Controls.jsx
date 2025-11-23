@@ -11,7 +11,9 @@ function Controls({
   fps, setFps,
   showColorbar, setShowColorbar,
   vmin, setVmin,
-  vmax, setVmax
+  vmax, setVmax,
+  logScale, setLogScale,
+  colorbarLabel, setColorbarLabel
 }) {
   return (
     <div className="controls-container">
@@ -64,6 +66,27 @@ function Controls({
           />
           Show Colorbar
         </label>
+        <label style={{ marginTop: '0.5rem' }}>
+          <input 
+            type="checkbox" 
+            checked={logScale} 
+            onChange={(e) => setLogScale(e.target.checked)} 
+            style={{ width: 'auto', marginRight: '0.5rem' }}
+          />
+          Log Scale
+        </label>
+        {showColorbar && (
+          <div style={{ marginTop: '0.5rem' }}>
+            <label style={{ fontWeight: 'normal', fontSize: '0.9rem' }}>Label:</label>
+            <input 
+              type="text" 
+              value={colorbarLabel} 
+              onChange={(e) => setColorbarLabel(e.target.value)} 
+              placeholder="Default"
+              style={{ marginTop: '0.2rem' }}
+            />
+          </div>
+        )}
       </div>
 
       <div className="control-group">
