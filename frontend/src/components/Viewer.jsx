@@ -2,15 +2,15 @@ import React, { useState, useEffect } from 'react';
 
 function Viewer({ axis, field, coord, refreshTrigger }) {
   const [imageUrl, setImageUrl] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchImage();
+    if (field) {
+      fetchImage();
+    }
   }, [axis, field, coord, refreshTrigger]);
 
   const fetchImage = async () => {
-    setLoading(true);
     setError(null);
     try {
       let url = `http://localhost:8000/api/slice?axis=${axis}&field=${field}`;
@@ -28,8 +28,6 @@ function Viewer({ axis, field, coord, refreshTrigger }) {
       setImageUrl(objectUrl);
     } catch (err) {
       setError(err.message);
-    } finally {
-      setLoading(false);
     }
   };
 

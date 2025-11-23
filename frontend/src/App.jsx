@@ -5,7 +5,7 @@ import Controls from './components/Controls'
 
 function App() {
   const [axis, setAxis] = useState('z');
-  const [field, setField] = useState('density');
+  const [field, setField] = useState(null);
   const [coord, setCoord] = useState(null);
   const [fieldsList, setFieldsList] = useState([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -15,7 +15,7 @@ function App() {
   const [datasets, setDatasets] = useState([]);
   const [currentDataset, setCurrentDataset] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
-  const [fps, setFps] = useState(5);
+  const [fps, setFps] = useState(1);
 
   useEffect(() => {
     // Load initial data
@@ -66,8 +66,10 @@ function App() {
       setFieldsList(fieldsData.fields);
       
       // Keep current field if available, else default to first
-      if (fieldsData.fields.length > 0 && !fieldsData.fields.includes(field)) {
-        setField(fieldsData.fields[0]);
+      if (fieldsData.fields.length > 0) {
+        if (!field || !fieldsData.fields.includes(field)) {
+          setField(fieldsData.fields[0]);
+        }
       }
       
       // Trigger refresh of viewer
