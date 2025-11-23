@@ -24,6 +24,8 @@ function App() {
   const [logScale, setLogScale] = useState(true);
   const [colorbarLabel, setColorbarLabel] = useState('');
   const [appliedColorbarLabel, setAppliedColorbarLabel] = useState('');
+  const [colorbarOrientation, setColorbarOrientation] = useState('right');
+  const [appliedColorbarOrientation, setAppliedColorbarOrientation] = useState('right');
 
   useEffect(() => {
     // Load initial data
@@ -89,6 +91,7 @@ function App() {
     setAppliedVmin(vmin);
     setAppliedVmax(vmax);
     setAppliedColorbarLabel(colorbarLabel);
+    setAppliedColorbarOrientation(colorbarOrientation);
     setRefreshTrigger(prev => prev + 1);
   };
 
@@ -122,6 +125,8 @@ function App() {
           setLogScale={setLogScale}
           colorbarLabel={colorbarLabel}
           setColorbarLabel={setColorbarLabel}
+          colorbarOrientation={colorbarOrientation}
+          setColorbarOrientation={setColorbarOrientation}
         />
       </div>
       <div className="main-content">
@@ -135,6 +140,7 @@ function App() {
           vmax={appliedVmax}
           logScale={logScale}
           colorbarLabel={appliedColorbarLabel}
+          colorbarOrientation={appliedColorbarOrientation}
         />
       </div>
     </div>

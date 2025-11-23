@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, logScale, colorbarLabel }) {
+function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation }) {
   const [imageUrl, setImageUrl] = useState(null);
   const [error, setError] = useState(null);
 
@@ -8,7 +8,7 @@ function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, 
     if (field) {
       fetchImage();
     }
-  }, [axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, logScale, colorbarLabel]);
+  }, [axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation]);
 
   const fetchImage = async () => {
     setError(null);
@@ -25,6 +25,9 @@ function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, 
       }
       if (colorbarLabel) {
         url += `&colorbar_label=${encodeURIComponent(colorbarLabel)}`;
+      }
+      if (colorbarOrientation) {
+        url += `&colorbar_orientation=${colorbarOrientation}`;
       }
       
       const response = await fetch(url);

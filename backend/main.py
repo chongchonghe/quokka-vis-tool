@@ -73,7 +73,8 @@ def get_slice(
     vmax: Optional[float] = None,
     show_colorbar: bool = False,
     log_scale: bool = True,
-    colorbar_label: Optional[str] = None
+    colorbar_label: Optional[str] = None,
+    colorbar_orientation: str = "right"
 ):
     global ds
     if ds is None:
@@ -120,10 +121,16 @@ def get_slice(
             
             # Create divider for existing axes instance
             divider = make_axes_locatable(ax)
-            # Append axes to the right of ax, with 5% width and 5% padding
-            cax = divider.append_axes("right", size="5%", pad=0.05)
             
-            cbar = fig.colorbar(im, cax=cax)
+            if colorbar_orientation == 'top':
+                cax = divider.append_axes("top", size="5%", pad=0.05)
+                cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
+                cax.xaxis.set_ticks_position("top")
+                cax.xaxis.set_label_position("top")
+            else:
+                # Default to right
+                cax = divider.append_axes("right", size="5%", pad=0.05)
+                cbar = fig.colorbar(im, cax=cax, orientation="vertical")
             
             # Set colorbar label
             if colorbar_label:
