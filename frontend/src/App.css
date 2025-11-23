@@ -99,6 +99,7 @@ button:hover {
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative; /* Added for absolute positioning of children */
 }
 
 .slice-image {
@@ -108,9 +109,7 @@ button:hover {
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-.loading {
-  color: #666;
-}
+
 
 .error {
   color: red;

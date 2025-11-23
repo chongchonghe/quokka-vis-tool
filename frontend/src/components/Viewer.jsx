@@ -35,7 +35,6 @@ function Viewer({ axis, field, coord, refreshTrigger }) {
 
   return (
     <div className="viewer-container">
-      {loading && <div className="loading">Loading...</div>}
       {error && <div className="error">{error}</div>}
       {imageUrl && <img src={imageUrl} alt="Slice" className="slice-image" />}
     </div>
