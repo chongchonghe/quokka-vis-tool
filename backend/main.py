@@ -28,11 +28,22 @@ ds = None
 def read_root():
     return {"message": "AMReX Viz Tool Backend"}
 
+@app.get("/api/datasets")
+def get_datasets():
+    data_dir = "data"
+    if not os.path.exists(data_dir):
+        return {"datasets": []}
+    
+    datasets = [d for d in os.listdir(data_dir) if d.startswith("plt") and os.path.isdir(os.path.join(data_dir, d))]
+    datasets.sort()
+    return {"datasets": datasets}
+
 @app.post("/api/load_dataset")
-def load_dataset(path: str = "data/plt00500"):
+def load_dataset(filename: str = "plt00500"):
     global ds
+    path = os.path.join("data", filename)
     if not os.path.exists(path):
-        raise HTTPException(status_code=404, detail="Dataset not found")
+        raise HTTPException(status_code=404, detail=f"Dataset not found: {path}")
     
     try:
         ds = yt.load(path)

@@ -58,6 +58,26 @@ main {
   border: 1px solid #ccc;
 }
 
+.animation-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.animation-controls button {
+  width: auto;
+  flex: 1;
+}
+
+.animation-controls input {
+  width: 60px;
+}
+
+.animation-controls span {
+  font-size: 0.8rem;
+  color: #666;
+}
+
 button {
   width: 100%;
   padding: 0.5rem;

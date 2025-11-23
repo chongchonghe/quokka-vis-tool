@@ -5,10 +5,40 @@ function Controls({
   field, setField, 
   fieldsList, 
   coord, setCoord,
-  onRefresh 
+  onRefresh,
+  datasets, currentDataset, setDataset,
+  isPlaying, setIsPlaying,
+  animationSpeed, setAnimationSpeed
 }) {
   return (
     <div className="controls-container">
+      <div className="control-group">
+        <label>Dataset:</label>
+        <select value={currentDataset} onChange={(e) => setDataset(e.target.value)}>
+          {datasets.map(d => (
+            <option key={d} value={d}>{d}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="control-group">
+        <label>Animation:</label>
+        <div className="animation-controls">
+          <button onClick={() => setIsPlaying(!isPlaying)}>
+            {isPlaying ? 'Pause' : 'Play'}
+          </button>
+          <input 
+            type="range" 
+            min="100" 
+            max="2000" 
+            step="100"
+            value={animationSpeed} 
+            onChange={(e) => setAnimationSpeed(Number(e.target.value))}
+          />
+          <span>{animationSpeed}ms</span>
+        </div>
+      </div>
+
       <div className="control-group">
         <label>Axis:</label>
         <select value={axis} onChange={(e) => setAxis(e.target.value)}>

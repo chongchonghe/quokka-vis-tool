@@ -10,26 +10,70 @@ function App() {
   const [fieldsList, setFieldsList] = useState([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [datasetInfo, setDatasetInfo] = useState(null);
+  
+  // Animation state
+  const [datasets, setDatasets] = useState([]);
+  const [currentDataset, setCurrentDataset] = useState('');
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [animationSpeed, setAnimationSpeed] = useState(500);
 
   useEffect(() => {
-    // Load dataset and fields on mount
-    loadDataset();
+    // Load initial data
+    fetchDatasets();
   }, []);
 
-  const loadDataset = async () => {
+  useEffect(() => {
+    if (datasets.length > 0 && !currentDataset) {
+      loadDataset(datasets[0]);
+    }
+  }, [datasets]);
+
+  // Animation loop
+  useEffect(() => {
+    let interval;
+    if (isPlaying && datasets.length > 0) {
+      interval = setInterval(() => {
+        const currentIndex = datasets.indexOf(currentDataset);
+        const nextIndex = (currentIndex + 1) % datasets.length;
+        loadDataset(datasets[nextIndex]);
+      }, animationSpeed);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying, datasets, currentDataset, animationSpeed]);
+
+  const fetchDatasets = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/load_dataset', { method: 'POST' });
+      const res = await fetch('http://localhost:8000/api/datasets');
+      const data = await res.json();
+      setDatasets(data.datasets);
+      if (data.datasets.length > 0) {
+        setCurrentDataset(data.datasets[0]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch datasets:", err);
+    }
+  };
+
+  const loadDataset = async (filename) => {
+    try {
+      setCurrentDataset(filename);
+      const res = await fetch(`http://localhost:8000/api/load_dataset?filename=${filename}`, { method: 'POST' });
       const data = await res.json();
       setDatasetInfo(data);
       
       const fieldsRes = await fetch('http://localhost:8000/api/fields');
       const fieldsData = await fieldsRes.json();
       setFieldsList(fieldsData.fields);
-      if (fieldsData.fields.length > 0) {
+      
+      // Keep current field if available, else default to first
+      if (fieldsData.fields.length > 0 && !fieldsData.fields.includes(field)) {
         setField(fieldsData.fields[0]);
       }
+      
+      // Trigger refresh of viewer
+      setRefreshTrigger(prev => prev + 1);
     } catch (err) {
-      console.error("Failed to init:", err);
+      console.error("Failed to load dataset:", err);
     }
   };
 
@@ -52,6 +96,13 @@ function App() {
             fieldsList={fieldsList}
             coord={coord} setCoord={setCoord}
             onRefresh={handleRefresh}
+            datasets={datasets}
+            currentDataset={currentDataset}
+            setDataset={loadDataset}
+            isPlaying={isPlaying}
+            setIsPlaying={setIsPlaying}
+            animationSpeed={animationSpeed}
+            setAnimationSpeed={setAnimationSpeed}
           />
         </div>
         <div className="main-content">
