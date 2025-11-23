@@ -15,7 +15,9 @@ function Controls({
   logScale, setLogScale,
   colorbarLabel, setColorbarLabel,
   colorbarOrientation, setColorbarOrientation,
-  cmap, setCmap
+  cmap, setCmap,
+  resolution, setResolution,
+  showScaleBar, setShowScaleBar
 }) {
   return (
     <div className="controls-container">
@@ -71,6 +73,15 @@ function Controls({
         <label style={{ marginTop: '0.5rem' }}>
           <input 
             type="checkbox" 
+            checked={showScaleBar} 
+            onChange={(e) => setShowScaleBar(e.target.checked)} 
+            style={{ width: 'auto', marginRight: '0.5rem' }}
+          />
+          Show Scale Bar
+        </label>
+        <label style={{ marginTop: '0.5rem' }}>
+          <input 
+            type="checkbox" 
             checked={logScale} 
             onChange={(e) => setLogScale(e.target.checked)} 
             style={{ width: 'auto', marginRight: '0.5rem' }}
@@ -103,17 +114,25 @@ function Controls({
       <div className="control-group">
         <label>Limits (Min / Max):</label>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontWeight: 'normal', fontSize: '0.9rem' }}>Min:</label>
+            <input type="number" value={vmin} onChange={(e) => setVmin(e.target.value)} placeholder="Auto" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontWeight: 'normal', fontSize: '0.9rem' }}>Max:</label>
+            <input type="number" value={vmax} onChange={(e) => setVmax(e.target.value)} placeholder="Auto" />
+          </div>
+        </div>
+        <div style={{ marginTop: '0.5rem' }}>
+          <label style={{ fontWeight: 'normal', fontSize: '0.9rem' }}>Resolution:</label>
           <input 
-            type="text" 
-            value={vmin} 
-            onChange={(e) => setVmin(e.target.value)} 
-            placeholder="Min"
-          />
-          <input 
-            type="text" 
-            value={vmax} 
-            onChange={(e) => setVmax(e.target.value)} 
-            placeholder="Max"
+            type="number" 
+            value={resolution} 
+            onChange={(e) => setResolution(parseInt(e.target.value) || 512)} 
+            placeholder="512"
+            min="64"
+            max="4096"
+            step="64"
           />
         </div>
       </div>

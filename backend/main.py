@@ -9,6 +9,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
+import matplotlib.font_manager as fm
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -75,7 +77,9 @@ def get_slice(
     log_scale: bool = True,
     colorbar_label: Optional[str] = None,
     colorbar_orientation: str = "right",
-    cmap: str = "viridis"
+    cmap: str = "viridis",
+    resolution: int = 512,
+    show_scale_bar: bool = False
 ):
     global ds
     if ds is None:
@@ -96,7 +100,7 @@ def get_slice(
         Wy = ds.domain_width[y_ax_id].v
         aspect = float(Wy / Wx)
         
-        resolution = 512
+        
         if aspect > 1:
             nx = resolution
             ny = int(resolution * aspect)
@@ -145,6 +149,42 @@ def get_slice(
             
             cbar.set_label(label)
             
+            # Add scale bar if requested
+            if show_scale_bar:
+                # Calculate scale bar size (1/5 of image width)
+                axis_id = ds.coordinates.axis_id[axis]
+                x_ax_id = ds.coordinates.x_axis[axis_id]
+                width_with_units = ds.domain_width[x_ax_id]
+                width_value = float(width_with_units.v)
+                units = str(width_with_units.units)
+                
+                # Scale bar size: 1/5 of domain width
+                scale_size = width_value / 5.0
+                
+                # Round to a nice number
+                magnitude = 10 ** np.floor(np.log10(scale_size))
+                nice_scale = np.round(scale_size / magnitude) * magnitude
+                
+                # Convert physical size to pixel size
+                # The image has nx pixels spanning width_value physical units
+                pixels_per_unit = nx / width_value
+                scale_bar_pixels = nice_scale * pixels_per_unit
+                
+                # Create scale bar
+                fontprops = fm.FontProperties(size=10, weight='bold')
+                scalebar = AnchoredSizeBar(
+                    ax.transData,
+                    scale_bar_pixels,
+                    f'{nice_scale:.3g} {units}',
+                    'lower left',
+                    pad=0.5,
+                    color='white',
+                    frameon=False,
+                    size_vertical=scale_bar_pixels/50,
+                    fontproperties=fontprops
+                )
+                ax.add_artist(scalebar)
+            
             ax.axis('off')
             plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0.1, dpi=300)
             plt.close(fig)
@@ -164,7 +204,57 @@ def get_slice(
             cm = matplotlib.colormaps[cmap]
             colored_data = cm(mapped_data)
             
-            plt.imsave(buf, colored_data, origin='lower', format='png', pil_kwargs={'dpi': (300, 300)})
+            # If scale bar is requested, we need to use matplotlib figure instead of imsave
+            if show_scale_bar:
+                # Calculate aspect ratio for figure
+                axis_id = ds.coordinates.axis_id[axis]
+                x_ax_id = ds.coordinates.x_axis[axis_id]
+                y_ax_id = ds.coordinates.y_axis[axis_id]
+                Wx = ds.domain_width[x_ax_id].v
+                Wy = ds.domain_width[y_ax_id].v
+                aspect = float(Wy / Wx)
+                
+                fig = plt.figure(figsize=(8, 8*aspect if aspect < 1 else 8))
+                ax = fig.add_subplot(111)
+                ax.imshow(colored_data, origin='lower', aspect='auto')
+                
+                # Calculate scale bar size
+                width_with_units = ds.domain_width[x_ax_id]
+                width_value = float(width_with_units.v)
+                units = str(width_with_units.units)
+                
+                # Scale bar size: 1/5 of domain width
+                scale_size = width_value / 5.0
+                
+                # Round to a nice number
+                magnitude = 10 ** np.floor(np.log10(scale_size))
+                nice_scale = np.round(scale_size / magnitude) * magnitude
+                
+                # Convert physical size to pixel size
+                # The image has nx pixels spanning width_value physical units
+                pixels_per_unit = nx / width_value
+                scale_bar_pixels = nice_scale * pixels_per_unit
+                
+                # Create scale bar
+                fontprops = fm.FontProperties(size=10, weight='bold')
+                scalebar = AnchoredSizeBar(
+                    ax.transData,
+                    scale_bar_pixels,
+                    f'{nice_scale:.3g} {units}',
+                    'lower left',
+                    pad=0.5,
+                    color='white',
+                    frameon=False,
+                    size_vertical=scale_bar_pixels/50,
+                    fontproperties=fontprops
+                )
+                ax.add_artist(scalebar)
+                
+                ax.axis('off')
+                plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0.1, dpi=300)
+                plt.close(fig)
+            else:
+                plt.imsave(buf, colored_data, origin='lower', format='png', pil_kwargs={'dpi': (300, 300)})
             
         buf.seek(0)
         
