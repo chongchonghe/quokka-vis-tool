@@ -125,7 +125,12 @@ def get_slice(
         
         if show_colorbar:
             # Use matplotlib figure to show colorbar
-            fig = plt.figure(figsize=(8, 8/aspect if aspect < 1 else 8))
+            # Calculate figure size based on actual image dimensions to preserve aspect ratio
+            base_width = 8  # inches
+            fig_aspect = ny / nx  # actual image aspect ratio
+            fig_height = base_width * fig_aspect
+            
+            fig = plt.figure(figsize=(base_width, fig_height))
             ax = fig.add_subplot(111)
             
             norm = matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax) if log_scale else matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
@@ -257,7 +262,13 @@ def get_slice(
                 Wy = ds.domain_width[y_ax_id].v
                 aspect = float(Wy / Wx)
                 
-                fig = plt.figure(figsize=(8, 8*aspect if aspect < 1 else 8))
+                # Calculate figure size based on actual image dimensions to preserve aspect ratio
+                # Use a base width and calculate height from the image aspect ratio
+                base_width = 8  # inches
+                fig_aspect = ny / nx  # actual image aspect ratio
+                fig_height = base_width * fig_aspect
+                
+                fig = plt.figure(figsize=(base_width, fig_height))
                 ax = fig.add_subplot(111)
                 ax.imshow(colored_data, origin='lower', aspect='auto')
                 
