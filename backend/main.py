@@ -96,13 +96,13 @@ def get_slice(
         Wy = ds.domain_width[y_ax_id].v
         aspect = float(Wy / Wx)
         
-        resolution = 800
+        resolution = 512
         if aspect > 1:
-            ny = resolution
-            nx = int(resolution / aspect)
-        else:
             nx = resolution
             ny = int(resolution * aspect)
+        else:
+            ny = resolution
+            nx = int(resolution / aspect)
             
         slc.set_buff_size((nx, ny))
         
@@ -146,7 +146,7 @@ def get_slice(
             cbar.set_label(label)
             
             ax.axis('off')
-            plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0.1)
+            plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0.1, dpi=300)
             plt.close(fig)
         else:
             # Save directly using imsave to preserve aspect ratio and avoid borders
@@ -164,7 +164,7 @@ def get_slice(
             cm = matplotlib.colormaps[cmap]
             colored_data = cm(mapped_data)
             
-            plt.imsave(buf, colored_data, origin='lower', format='png')
+            plt.imsave(buf, colored_data, origin='lower', format='png', pil_kwargs={'dpi': (300, 300)})
             
         buf.seek(0)
         
