@@ -90,17 +90,31 @@ def get_slice(
         # This is a bit hacky to get the raw image data out quickly for a prototype
         # Ideally we'd use frb (Fixed Resolution Buffer)
         
+        # Calculate aspect ratio and set buffer size
+        axis_id = ds.coordinates.axis_id[axis]
+        x_ax_id = ds.coordinates.x_axis[axis_id]
+        y_ax_id = ds.coordinates.y_axis[axis_id]
+        
+        Wx = ds.domain_width[x_ax_id].v
+        Wy = ds.domain_width[y_ax_id].v
+        aspect = float(Wy / Wx)
+        
+        resolution = 800
+        if aspect > 1:
+            ny = resolution
+            nx = int(resolution / aspect)
+        else:
+            nx = resolution
+            ny = int(resolution * aspect)
+            
+        slc.set_buff_size((nx, ny))
+        
         frb = slc.frb
         image_data = np.array(frb[("boxlib", field)])
         
-        # Normalize and colorize using matplotlib
-        plt.figure(figsize=(8, 8))
-        plt.imshow(image_data, origin='lower', cmap='viridis')
-        plt.axis('off')
-        
+        # Save directly using imsave to preserve aspect ratio and avoid borders
         buf = io.BytesIO()
-        plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0)
-        plt.close()
+        plt.imsave(buf, image_data, cmap='viridis', origin='lower', format='png')
         buf.seek(0)
         
         return Response(content=buf.getvalue(), media_type="image/png")
