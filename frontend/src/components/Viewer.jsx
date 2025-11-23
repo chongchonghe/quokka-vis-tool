@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, cmap, resolution, showScaleBar, scaleBarSize, scaleBarUnit }) {
+function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, cmap, showScaleBar, scaleBarSize, scaleBarUnit, appliedScaleBarSize, appliedScaleBarUnit, appliedDpi }) {
   const [imageUrl, setImageUrl] = useState(null);
   const [error, setError] = useState(null);
 
@@ -8,12 +8,18 @@ function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, 
     if (field) {
       fetchImage();
     }
-  }, [axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, cmap, resolution, showScaleBar, scaleBarSize, scaleBarUnit]);
+  }, [axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, cmap,
+  showScaleBar,
+  scaleBarSize,
+  scaleBarUnit,
+  appliedScaleBarSize,
+  appliedScaleBarUnit,
+  appliedDpi]);
 
   const fetchImage = async () => {
     setError(null);
     try {
-      let url = `http://localhost:8000/api/slice?axis=${axis}&field=${field}&show_colorbar=${showColorbar}&log_scale=${logScale}&cmap=${cmap}&resolution=${resolution}&show_scale_bar=${showScaleBar}`;
+      let url = `http://localhost:8000/api/slice?axis=${axis}&field=${field}&refreshTrigger=${refreshTrigger}&show_colorbar=${showColorbar}&log_scale=${logScale}&cmap=${cmap}&dpi=${appliedDpi || 300}&show_scale_bar=${showScaleBar}`;
       if (coord !== null) {
         url += `&coord=${coord}`;
       }

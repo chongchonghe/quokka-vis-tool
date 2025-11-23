@@ -27,12 +27,13 @@ function App() {
   const [colorbarOrientation, setColorbarOrientation] = useState('right');
   const [appliedColorbarOrientation, setAppliedColorbarOrientation] = useState('right');
   const [cmap, setCmap] = useState('viridis');
-  const [resolution, setResolution] = useState(512);
+  const [dpi, setDpi] = useState(300);
   const [showScaleBar, setShowScaleBar] = useState(false);
   const [scaleBarSize, setScaleBarSize] = useState('');
   const [scaleBarUnit, setScaleBarUnit] = useState('');
   const [appliedScaleBarSize, setAppliedScaleBarSize] = useState('');
   const [appliedScaleBarUnit, setAppliedScaleBarUnit] = useState('');
+  const [appliedDpi, setAppliedDpi] = useState(300);
 
   useEffect(() => {
     // Load initial data
@@ -101,6 +102,7 @@ function App() {
     setAppliedColorbarOrientation(colorbarOrientation);
     setAppliedScaleBarSize(scaleBarSize);
     setAppliedScaleBarUnit(scaleBarUnit);
+    setAppliedDpi(dpi);
     setRefreshTrigger(prev => prev + 1);
   };
 
@@ -138,8 +140,8 @@ function App() {
           setColorbarOrientation={setColorbarOrientation}
           cmap={cmap}
           setCmap={setCmap}
-          resolution={resolution}
-          setResolution={setResolution}
+          dpi={dpi}
+          setDpi={setDpi}
           showScaleBar={showScaleBar}
           setShowScaleBar={setShowScaleBar}
           scaleBarSize={scaleBarSize}
@@ -161,10 +163,10 @@ function App() {
           colorbarLabel={appliedColorbarLabel}
           colorbarOrientation={appliedColorbarOrientation}
           cmap={cmap}
-          resolution={resolution}
           showScaleBar={showScaleBar}
           scaleBarSize={appliedScaleBarSize}
           scaleBarUnit={appliedScaleBarUnit}
+          dpi={appliedDpi}
         />
       </div>
     </div>

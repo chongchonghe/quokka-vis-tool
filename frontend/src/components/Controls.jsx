@@ -16,7 +16,7 @@ function Controls({
   colorbarLabel, setColorbarLabel,
   colorbarOrientation, setColorbarOrientation,
   cmap, setCmap,
-  resolution, setResolution,
+  dpi, setDpi, 
   showScaleBar, setShowScaleBar,
   scaleBarSize, setScaleBarSize,
   scaleBarUnit, setScaleBarUnit
@@ -154,18 +154,16 @@ function Controls({
             <input type="number" value={vmax} onChange={(e) => setVmax(e.target.value)} placeholder="Auto" />
           </div>
         </div>
-        <div style={{ marginTop: '0.5rem' }}>
-          <label style={{ fontWeight: 'normal', fontSize: '0.9rem' }}>Resolution:</label>
-          <input 
-            type="number" 
-            value={resolution} 
-            onChange={(e) => setResolution(parseInt(e.target.value) || 512)} 
-            placeholder="512"
-            min="64"
-            max="4096"
-            step="64"
-          />
-        </div>
+      </div>
+
+      <div className="control-group">
+        <label>DPI:</label>
+        <input 
+          type="number" 
+          value={dpi} 
+          onChange={(e) => setDpi(Number(e.target.value))}
+          step="10"
+        />
       </div>
 
       <div className="control-group">
