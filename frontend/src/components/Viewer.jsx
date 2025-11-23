@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, colormap }) {
+function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, cmap }) {
   const [imageUrl, setImageUrl] = useState(null);
   const [error, setError] = useState(null);
 
@@ -8,12 +8,12 @@ function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, 
     if (field) {
       fetchImage();
     }
-  }, [axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, colormap]);
+  }, [axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, cmap]);
 
   const fetchImage = async () => {
     setError(null);
     try {
-      let url = `http://localhost:8000/api/slice?axis=${axis}&field=${field}&show_colorbar=${showColorbar}&log_scale=${logScale}`;
+      let url = `http://localhost:8000/api/slice?axis=${axis}&field=${field}&show_colorbar=${showColorbar}&log_scale=${logScale}&cmap=${cmap}`;
       if (coord !== null) {
         url += `&coord=${coord}`;
       }
@@ -28,9 +28,6 @@ function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, 
       }
       if (colorbarOrientation) {
         url += `&colorbar_orientation=${colorbarOrientation}`;
-      }
-      if (colormap) {
-        url += `&colormap=${colormap}`;
       }
       
       const response = await fetch(url);

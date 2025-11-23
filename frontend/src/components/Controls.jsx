@@ -14,7 +14,8 @@ function Controls({
   vmax, setVmax,
   logScale, setLogScale,
   colorbarLabel, setColorbarLabel,
-  colorbarOrientation, setColorbarOrientation
+  colorbarOrientation, setColorbarOrientation,
+  cmap, setCmap
 }) {
   return (
     <div className="controls-container">
@@ -123,6 +124,23 @@ function Controls({
           {fieldsList.map(f => (
             <option key={f} value={f}>{f}</option>
           ))}
+        </select>
+      </div>
+
+      <div className="control-group">
+        <label>Colormap:</label>
+        <select value={cmap} onChange={(e) => setCmap(e.target.value)}>
+          <option value="viridis">Viridis</option>
+          <option value="plasma">Plasma</option>
+          <option value="inferno">Inferno</option>
+          <option value="magma">Magma</option>
+          <option value="cividis">Cividis</option>
+          <option value="coolwarm">Coolwarm</option>
+          <option value="RdBu">RdBu</option>
+          <option value="seismic">Seismic</option>
+          <option value="jet">Jet</option>
+          <option value="hot">Hot</option>
+          <option value="gray">Gray</option>
         </select>
       </div>
 

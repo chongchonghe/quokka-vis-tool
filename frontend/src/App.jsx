@@ -26,6 +26,7 @@ function App() {
   const [appliedColorbarLabel, setAppliedColorbarLabel] = useState('');
   const [colorbarOrientation, setColorbarOrientation] = useState('right');
   const [appliedColorbarOrientation, setAppliedColorbarOrientation] = useState('right');
+  const [cmap, setCmap] = useState('viridis');
 
   useEffect(() => {
     // Load initial data
@@ -127,6 +128,8 @@ function App() {
           setColorbarLabel={setColorbarLabel}
           colorbarOrientation={colorbarOrientation}
           setColorbarOrientation={setColorbarOrientation}
+          cmap={cmap}
+          setCmap={setCmap}
         />
       </div>
       <div className="main-content">
@@ -141,6 +144,7 @@ function App() {
           logScale={logScale}
           colorbarLabel={appliedColorbarLabel}
           colorbarOrientation={appliedColorbarOrientation}
+          cmap={cmap}
         />
       </div>
     </div>

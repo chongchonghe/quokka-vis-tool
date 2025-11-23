@@ -74,7 +74,8 @@ def get_slice(
     show_colorbar: bool = False,
     log_scale: bool = True,
     colorbar_label: Optional[str] = None,
-    colorbar_orientation: str = "right"
+    colorbar_orientation: str = "right",
+    cmap: str = "viridis"
 ):
     global ds
     if ds is None:
@@ -117,7 +118,7 @@ def get_slice(
             
             norm = matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax) if log_scale else matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
             
-            im = ax.imshow(image_data, origin='lower', cmap='viridis', norm=norm)
+            im = ax.imshow(image_data, origin='lower', cmap=cmap, norm=norm)
             
             # Create divider for existing axes instance
             divider = make_axes_locatable(ax)
@@ -160,7 +161,7 @@ def get_slice(
             mapped_data = norm(image_data)
             
             # Apply colormap
-            cm = matplotlib.colormaps['viridis']
+            cm = matplotlib.colormaps[cmap]
             colored_data = cm(mapped_data)
             
             plt.imsave(buf, colored_data, origin='lower', format='png')
