@@ -96,7 +96,14 @@ def get_fields():
     return {"fields": fields}
 
 
-@lru_cache(maxsize=32)
+# Load config for cache size
+try:
+    _config = load_config()
+    CACHE_MAX_SIZE = _config.get("cache_max_size", 32)
+except Exception:
+    CACHE_MAX_SIZE = 32
+
+@lru_cache(maxsize=CACHE_MAX_SIZE)
 def _generate_slice_image(
     dataset_path: str,
     axis: str,
