@@ -94,7 +94,6 @@ class DataDirRequest(BaseModel):
 
 @app.get("/")
 def read_root():
-    import socket
     hostname = socket.gethostname()
     cwd = os.getcwd()
     return {
