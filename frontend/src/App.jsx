@@ -13,6 +13,8 @@ function App() {
   
   const [dataDir, setDataDir] = useState('');
   
+  const [datasetPrefix, setDatasetPrefix] = useState('plt');
+  
   // Animation state
   const [datasets, setDatasets] = useState([]);
   const [currentDataset, setCurrentDataset] = useState('');
@@ -63,7 +65,7 @@ function App() {
 
   const fetchDatasets = async () => {
     try {
-      const res = await fetch('/api/datasets');
+      const res = await fetch(`/api/datasets?prefix=${datasetPrefix}`);
       const data = await res.json();
       setDatasets(data.datasets);
       // Don't set currentDataset here, let the useEffect handle it to trigger loadDataset
@@ -135,15 +137,27 @@ function App() {
       <div className="sidebar">
         <div className="sidebar-header">
           <h1>QUOKKA Viz Tool</h1>
-          <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
-            <input 
-              type="text" 
-              value={dataDir} 
-              onChange={(e) => setDataDir(e.target.value)} 
-              placeholder="/path/to/data"
-              style={{ flex: 1, padding: '0.25rem' }}
-            />
-            <button onClick={handleSetDataDir} style={{ padding: '0.25rem 0.5rem' }}>Set</button>
+          <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <input 
+                type="text" 
+                value={dataDir} 
+                onChange={(e) => setDataDir(e.target.value)} 
+                placeholder="/path/to/data"
+                style={{ flex: 1, padding: '0.25rem' }}
+              />
+              <button onClick={handleSetDataDir} style={{ padding: '0.25rem 0.5rem' }}>Set</button>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <label style={{ fontSize: '0.9rem' }}>Prefix:</label>
+              <input 
+                type="text" 
+                value={datasetPrefix} 
+                onChange={(e) => setDatasetPrefix(e.target.value)} 
+                style={{ flex: 1, padding: '0.25rem' }}
+              />
+              <button onClick={fetchDatasets} style={{ padding: '0.25rem 0.5rem' }}>Filter</button>
+            </div>
           </div>
           {datasetInfo && <span className="dataset-info">Loaded: {currentDataset}</span>}
         </div>

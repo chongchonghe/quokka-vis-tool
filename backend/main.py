@@ -73,12 +73,12 @@ def set_data_dir(request: DataDirRequest):
     return {"message": f"Data directory set to: {DATA_DIR}", "path": DATA_DIR}
 
 @app.get("/api/datasets")
-def get_datasets():
+def get_datasets(prefix: str = "plt"):
     global DATA_DIR
     if not os.path.exists(DATA_DIR):
         return {"datasets": []}
     
-    datasets = [d for d in os.listdir(DATA_DIR) if d.startswith("plt") and os.path.isdir(os.path.join(DATA_DIR, d))]
+    datasets = [d for d in os.listdir(DATA_DIR) if d.startswith(prefix) and os.path.isdir(os.path.join(DATA_DIR, d))]
     datasets.sort()
     return {"datasets": datasets}
 
