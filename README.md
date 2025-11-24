@@ -69,6 +69,19 @@ vis-tool-3d/
     ```
     The app will be accessible at `http://localhost:5173`.
 
+## Remote Access (SSH Tunneling)
+
+To access the visualization tool from a remote machine (e.g., your laptop) while the server runs on a cluster/workstation:
+
+1.  **Start the tool** on the remote server as usual (backend and frontend).
+2.  **Create an SSH tunnel** from your local machine:
+    ```bash
+    ssh -L 5173:localhost:5173 user@remote_host
+    ```
+3.  **Open your browser** to `http://localhost:5173`.
+
+The frontend (port 5173) will proxy API requests to the backend (port 8000) automatically, so you only need to tunnel port 5173.
+
 ## Configuration
 
 Modify `backend/config.yaml` to customize the visualization appearance and performance:

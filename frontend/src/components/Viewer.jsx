@@ -19,7 +19,7 @@ function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, 
   const fetchImage = async () => {
     setError(null);
     try {
-      let url = `http://localhost:8000/api/slice?axis=${axis}&field=${field}&refreshTrigger=${refreshTrigger}&show_colorbar=${showColorbar}&log_scale=${logScale}&cmap=${cmap}&dpi=${appliedDpi || 300}&show_scale_bar=${showScaleBar}`;
+      let url = `/api/slice?axis=${axis}&field=${field}&refreshTrigger=${refreshTrigger}&show_colorbar=${showColorbar}&log_scale=${logScale}&cmap=${cmap}&dpi=${appliedDpi || 300}&show_scale_bar=${showScaleBar}`;
       if (coord !== null) {
         url += `&coord=${coord}`;
       }

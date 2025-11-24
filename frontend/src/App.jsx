@@ -61,7 +61,7 @@ function App() {
 
   const fetchDatasets = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/datasets');
+      const res = await fetch('/api/datasets');
       const data = await res.json();
       setDatasets(data.datasets);
       // Don't set currentDataset here, let the useEffect handle it to trigger loadDataset
@@ -73,11 +73,11 @@ function App() {
   const loadDataset = async (filename) => {
     try {
       setCurrentDataset(filename);
-      const res = await fetch(`http://localhost:8000/api/load_dataset?filename=${filename}`, { method: 'POST' });
+      const res = await fetch(`/api/load_dataset?filename=${filename}`, { method: 'POST' });
       const data = await res.json();
       setDatasetInfo(data);
       
-      const fieldsRes = await fetch('http://localhost:8000/api/fields');
+      const fieldsRes = await fetch('/api/fields');
       const fieldsData = await fieldsRes.json();
       setFieldsList(fieldsData.fields);
       
