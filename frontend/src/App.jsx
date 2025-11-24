@@ -11,6 +11,8 @@ function App() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [datasetInfo, setDatasetInfo] = useState(null);
   
+  const [dataDir, setDataDir] = useState('');
+  
   // Animation state
   const [datasets, setDatasets] = useState([]);
   const [currentDataset, setCurrentDataset] = useState('');
@@ -70,6 +72,28 @@ function App() {
     }
   };
 
+  const handleSetDataDir = async () => {
+    if (!dataDir) return;
+    try {
+      const res = await fetch('/api/set_data_dir', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: dataDir })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        alert(`Data directory set to: ${data.path}`);
+        fetchDatasets();
+      } else {
+        const err = await res.json();
+        alert(`Error: ${err.detail}`);
+      }
+    } catch (err) {
+      console.error("Failed to set data directory:", err);
+      alert("Failed to set data directory");
+    }
+  };
+
   const loadDataset = async (filename) => {
     try {
       setCurrentDataset(filename);
@@ -111,6 +135,16 @@ function App() {
       <div className="sidebar">
         <div className="sidebar-header">
           <h1>QUOKKA Viz Tool</h1>
+          <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
+            <input 
+              type="text" 
+              value={dataDir} 
+              onChange={(e) => setDataDir(e.target.value)} 
+              placeholder="/path/to/data"
+              style={{ flex: 1, padding: '0.25rem' }}
+            />
+            <button onClick={handleSetDataDir} style={{ padding: '0.25rem 0.5rem' }}>Set</button>
+          </div>
           {datasetInfo && <span className="dataset-info">Dataset: {datasetInfo.message}</span>}
         </div>
         <Controls 

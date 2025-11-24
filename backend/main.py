@@ -46,32 +46,46 @@ app.add_middleware(
 ds = None
 current_dataset_path = None
 
+# Default data directory
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(backend_dir)
+DATA_DIR = os.path.join(project_root, "data")
+
+from pydantic import BaseModel
+
+class DataDirRequest(BaseModel):
+    path: str
+
 @app.get("/")
 def read_root():
     return {"message": "QUOKKA Viz Tool Backend"}
 
+@app.post("/api/set_data_dir")
+def set_data_dir(request: DataDirRequest):
+    global DATA_DIR
+    path = request.path
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail=f"Directory not found: {path}")
+    if not os.path.isdir(path):
+        raise HTTPException(status_code=400, detail=f"Path is not a directory: {path}")
+    
+    DATA_DIR = path
+    return {"message": f"Data directory set to: {DATA_DIR}", "path": DATA_DIR}
+
 @app.get("/api/datasets")
 def get_datasets():
-    # Data directory is in the parent directory of the backend folder
-    # Get the directory containing main.py
-    backend_dir = os.path.dirname(os.path.abspath(__file__))
-    # Go up one level to project root
-    project_root = os.path.dirname(backend_dir)
-    data_dir = os.path.join(project_root, "data")
-    if not os.path.exists(data_dir):
+    global DATA_DIR
+    if not os.path.exists(DATA_DIR):
         return {"datasets": []}
     
-    datasets = [d for d in os.listdir(data_dir) if d.startswith("plt") and os.path.isdir(os.path.join(data_dir, d))]
+    datasets = [d for d in os.listdir(DATA_DIR) if d.startswith("plt") and os.path.isdir(os.path.join(DATA_DIR, d))]
     datasets.sort()
     return {"datasets": datasets}
 
 @app.post("/api/load_dataset")
 def load_dataset(filename: str = "plt00500"):
-    global ds
-    # Data directory is in the parent directory of the backend folder
-    backend_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(backend_dir)
-    path = os.path.join(project_root, "data", filename)
+    global ds, DATA_DIR
+    path = os.path.join(DATA_DIR, filename)
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail=f"Dataset not found: {path}")
     
