@@ -134,15 +134,7 @@ function Controls({
               placeholder="Default"
               style={{ marginTop: '0.2rem' }}
             />
-            <label style={{ fontWeight: 'normal', fontSize: '0.9rem', marginTop: '0.5rem', display: 'block' }}>Position:</label>
-            <select 
-              value={colorbarOrientation} 
-              onChange={(e) => setColorbarOrientation(e.target.value)}
-              style={{ marginTop: '0.2rem' }}
-            >
-              <option value="right">Right</option>
-              <option value="top">Top</option>
-            </select>
+
           </div>
         )}
       </div>

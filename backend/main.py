@@ -227,14 +227,8 @@ def get_slice(
             # Create divider for existing axes instance
             divider = make_axes_locatable(ax)
             
-            if colorbar_orientation == 'top':
-                cax = divider.append_axes("top", size=f"{COLORMAP_FRACTION*100}%", pad=0.05)
-                cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
-                cax.xaxis.set_ticks_position("top")
-                cax.xaxis.set_label_position("top")
-            else:
-                # Default to right
-                cax = divider.append_axes("right", size=f"{COLORMAP_FRACTION*100}%", pad=0.05)
+            # Colorbar always on the right
+            cax = divider.append_axes("right", size=f"{COLORMAP_FRACTION*100}%", pad=0.05)
             cbar = fig.colorbar(im, cax=cax, orientation="vertical")
             
             # Set colorbar label
