@@ -47,12 +47,28 @@ function App() {
   }, []);
 
   const fetchServerInfo = async () => {
+    console.log("Fetching server info...");
     try {
       const res = await fetch('/api/server_info');
+      console.log("Server info response status:", res.status);
       const data = await res.json();
+      console.log("Server info data:", data);
       setServerInfo(data);
     } catch (err) {
       console.error("Failed to fetch server info:", err);
+    }
+  };
+
+  const testPath = async (pathToTest) => {
+    console.log("Testing path:", pathToTest);
+    try {
+      const res = await fetch(`/api/test_path?path=${encodeURIComponent(pathToTest)}`);
+      const data = await res.json();
+      console.log("Path test results:", data);
+      return data;
+    } catch (err) {
+      console.error("Failed to test path:", err);
+      return null;
     }
   };
 
@@ -87,25 +103,70 @@ function App() {
   };
 
   const handleSetDataDir = async () => {
-    if (!dataDir) return;
+    console.log("========================================");
+    console.log("handleSetDataDir called");
+    console.log("dataDir value:", dataDir);
+    console.log("dataDir type:", typeof dataDir);
+    console.log("dataDir length:", dataDir.length);
+    
+    if (!dataDir) {
+      console.error("dataDir is empty, returning");
+      alert("Please enter a data directory path");
+      return;
+    }
+    
+    const requestBody = { path: dataDir };
+    console.log("Request body:", requestBody);
+    console.log("Request body JSON:", JSON.stringify(requestBody));
+    
     try {
+      console.log("Sending POST request to /api/set_data_dir");
+      console.log("Full URL:", window.location.origin + '/api/set_data_dir');
+      
       const res = await fetch('/api/set_data_dir', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: dataDir })
+        body: JSON.stringify(requestBody)
       });
+      
+      console.log("Response received");
+      console.log("Response status:", res.status);
+      console.log("Response ok:", res.ok);
+      console.log("Response headers:", Object.fromEntries(res.headers.entries()));
+      
       if (res.ok) {
         const data = await res.json();
+        console.log("Success response data:", data);
         alert(`Data directory set to: ${data.path}`);
         fetchDatasets();
       } else {
-        const err = await res.json();
-        alert(`Error: ${err.detail}\n\nNote: Path must exist on the SERVER where the backend is running, not your local machine.`);
+        console.error("Error response");
+        const contentType = res.headers.get("content-type");
+        console.log("Content-Type:", contentType);
+        
+        if (contentType && contentType.includes("application/json")) {
+          const err = await res.json();
+          console.error("Error details:", err);
+          console.error("Error detail message:", err.detail);
+          alert(`Error: ${err.detail}\n\nNote: Path must exist on the SERVER where the backend is running, not your local machine.`);
+        } else {
+          const text = await res.text();
+          console.error("Non-JSON error response:", text);
+          alert(`Error (${res.status}): ${text}\n\nNote: Path must exist on the SERVER where the backend is running, not your local machine.`);
+        }
       }
     } catch (err) {
-      console.error("Failed to set data directory:", err);
-      alert("Failed to set data directory. The path must exist on the server where the backend is running.");
+      console.error("========================================");
+      console.error("Exception caught in handleSetDataDir");
+      console.error("Error type:", err.constructor.name);
+      console.error("Error message:", err.message);
+      console.error("Error stack:", err.stack);
+      console.error("========================================");
+      alert(`Failed to set data directory: ${err.message}\n\nThe path must exist on the server where the backend is running.`);
     }
+    
+    console.log("handleSetDataDir complete");
+    console.log("========================================\n");
   };
 
   const loadDataset = async (filename) => {
@@ -166,6 +227,13 @@ function App() {
                 style={{ flex: 1, padding: '0.25rem' }}
               />
               <button onClick={handleSetDataDir} style={{ padding: '0.25rem 0.5rem' }}>Set</button>
+              <button 
+                onClick={() => dataDir && testPath(dataDir).then(result => alert(JSON.stringify(result, null, 2)))} 
+                style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                title="Test if path exists on server"
+              >
+                Test
+              </button>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               <label style={{ fontSize: '0.9rem' }}>Prefix:</label>

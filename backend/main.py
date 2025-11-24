@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import Response
 import yt
 import unyt
@@ -14,8 +14,23 @@ import yaml
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 import matplotlib.font_manager as fm
+import logging
+import sys
+import traceback
+import socket
 
 from fastapi.middleware.cors import CORSMiddleware
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('backend_debug.log')
+    ]
+)
+logger = logging.getLogger(__name__)
 
 
 def load_config():
@@ -33,6 +48,27 @@ DEFAULT_CONFIG = {
 }
 
 app = FastAPI()
+
+# Add request logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info(f"====== Incoming Request ======")
+    logger.info(f"Method: {request.method}")
+    logger.info(f"URL: {request.url}")
+    logger.info(f"Headers: {dict(request.headers)}")
+    logger.info(f"Client: {request.client}")
+    
+    # Read body for POST requests
+    if request.method == "POST":
+        body = await request.body()
+        logger.info(f"Body: {body.decode('utf-8') if body else 'Empty'}")
+        # Store body for later use
+        request._body = body
+    
+    response = await call_next(request)
+    logger.info(f"Response Status: {response.status_code}")
+    logger.info(f"====== Request Complete ======\n")
+    return response
 
 app.add_middleware(
     CORSMiddleware,
@@ -70,34 +106,153 @@ def read_root():
 
 @app.post("/api/set_data_dir")
 def set_data_dir(request: DataDirRequest):
-    import socket
     global DATA_DIR
-    path = request.path
+    
+    logger.info("=" * 80)
+    logger.info("SET_DATA_DIR endpoint called")
+    logger.info(f"Received request object: {request}")
+    logger.info(f"Request path value: {request.path}")
+    logger.info(f"Request path type: {type(request.path)}")
+    
     hostname = socket.gethostname()
+    logger.info(f"Backend server hostname: {hostname}")
+    logger.info(f"Current working directory: {os.getcwd()}")
+    logger.info(f"Current DATA_DIR value: {DATA_DIR}")
     
-    if not os.path.exists(path):
-        raise HTTPException(
-            status_code=404, 
-            detail=f"Directory not found on server '{hostname}': {path}\n\nNote: When using SSH tunneling, the path must exist on the machine where the backend is running, not your local machine."
-        )
-    if not os.path.isdir(path):
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Path is not a directory on server '{hostname}': {path}"
-        )
+    path = request.path
+    logger.info(f"Attempting to set data directory to: {path}")
     
+    # Check if path is absolute
+    if not os.path.isabs(path):
+        logger.warning(f"Path is not absolute: {path}")
+        abs_path = os.path.abspath(path)
+        logger.info(f"Converting to absolute path: {abs_path}")
+        path = abs_path
+    
+    # Check if path exists
+    logger.info(f"Checking if path exists: {path}")
+    path_exists = os.path.exists(path)
+    logger.info(f"os.path.exists({path}) = {path_exists}")
+    
+    if not path_exists:
+        # List parent directory to help debug
+        parent_dir = os.path.dirname(path)
+        logger.error(f"Path does not exist: {path}")
+        logger.info(f"Parent directory: {parent_dir}")
+        
+        if os.path.exists(parent_dir):
+            try:
+                contents = os.listdir(parent_dir)
+                logger.info(f"Parent directory contents: {contents[:20]}")  # First 20 items
+            except Exception as e:
+                logger.error(f"Could not list parent directory: {e}")
+        else:
+            logger.error(f"Parent directory also does not exist: {parent_dir}")
+        
+        error_msg = f"Directory not found on server '{hostname}': {path}\n\nNote: When using SSH tunneling, the path must exist on the machine where the backend is running, not your local machine."
+        logger.error(f"Raising HTTPException 404: {error_msg}")
+        raise HTTPException(status_code=404, detail=error_msg)
+    
+    # Check if it's a directory
+    logger.info(f"Checking if path is a directory: {path}")
+    is_directory = os.path.isdir(path)
+    logger.info(f"os.path.isdir({path}) = {is_directory}")
+    
+    if not is_directory:
+        error_msg = f"Path is not a directory on server '{hostname}': {path}"
+        logger.error(f"Raising HTTPException 400: {error_msg}")
+        raise HTTPException(status_code=400, detail=error_msg)
+    
+    # Check permissions
+    try:
+        logger.info(f"Checking read permissions for: {path}")
+        can_read = os.access(path, os.R_OK)
+        logger.info(f"os.access({path}, os.R_OK) = {can_read}")
+        
+        # Try to list directory
+        contents = os.listdir(path)
+        logger.info(f"Successfully listed directory, found {len(contents)} items")
+        logger.info(f"First 10 items: {contents[:10]}")
+    except Exception as e:
+        logger.error(f"Error accessing directory: {e}")
+        logger.error(traceback.format_exc())
+    
+    # Set the directory
+    old_data_dir = DATA_DIR
     DATA_DIR = path
-    return {"message": f"Data directory set to: {DATA_DIR} on server '{hostname}'", "path": DATA_DIR, "server": hostname}
+    logger.info(f"Successfully changed DATA_DIR from '{old_data_dir}' to '{DATA_DIR}'")
+    
+    response = {
+        "message": f"Data directory set to: {DATA_DIR} on server '{hostname}'",
+        "path": DATA_DIR,
+        "server": hostname
+    }
+    logger.info(f"Returning success response: {response}")
+    logger.info("=" * 80 + "\n")
+    
+    return response
 
 @app.get("/api/server_info")
 def get_server_info():
-    import socket
     hostname = socket.gethostname()
-    return {
+    info = {
         "hostname": hostname,
         "current_data_directory": DATA_DIR,
-        "data_dir_exists": os.path.exists(DATA_DIR)
+        "data_dir_exists": os.path.exists(DATA_DIR),
+        "current_working_directory": os.getcwd(),
+        "backend_file_location": os.path.abspath(__file__),
+        "python_version": sys.version,
+        "os_name": os.name,
+        "can_read_data_dir": os.access(DATA_DIR, os.R_OK) if os.path.exists(DATA_DIR) else False
     }
+    
+    logger.info("Server info requested:")
+    logger.info(f"  Hostname: {hostname}")
+    logger.info(f"  Current DATA_DIR: {DATA_DIR}")
+    logger.info(f"  DATA_DIR exists: {info['data_dir_exists']}")
+    
+    return info
+
+@app.get("/api/test_path")
+def test_path(path: str):
+    """Test endpoint to check if a path exists and get detailed info"""
+    logger.info(f"Testing path: {path}")
+    
+    result = {
+        "path": path,
+        "is_absolute": os.path.isabs(path),
+        "exists": os.path.exists(path),
+        "is_dir": os.path.isdir(path) if os.path.exists(path) else None,
+        "is_file": os.path.isfile(path) if os.path.exists(path) else None,
+        "can_read": os.access(path, os.R_OK) if os.path.exists(path) else None,
+        "absolute_path": os.path.abspath(path),
+        "server_hostname": socket.gethostname()
+    }
+    
+    # If path exists, try to list contents
+    if os.path.exists(path) and os.path.isdir(path):
+        try:
+            contents = os.listdir(path)
+            result["contents_count"] = len(contents)
+            result["first_10_items"] = contents[:10]
+        except Exception as e:
+            result["list_error"] = str(e)
+    
+    # Check parent directory
+    parent = os.path.dirname(path)
+    result["parent_directory"] = parent
+    result["parent_exists"] = os.path.exists(parent)
+    
+    if os.path.exists(parent) and os.path.isdir(parent):
+        try:
+            parent_contents = os.listdir(parent)
+            result["parent_contents_count"] = len(parent_contents)
+            result["parent_first_20_items"] = parent_contents[:20]
+        except Exception as e:
+            result["parent_list_error"] = str(e)
+    
+    logger.info(f"Path test result: {result}")
+    return result
 
 @app.get("/api/datasets")
 def get_datasets(prefix: str = "plt"):
