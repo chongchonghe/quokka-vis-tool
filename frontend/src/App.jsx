@@ -145,7 +145,7 @@ function App() {
             />
             <button onClick={handleSetDataDir} style={{ padding: '0.25rem 0.5rem' }}>Set</button>
           </div>
-          {datasetInfo && <span className="dataset-info">Dataset: {datasetInfo.message}</span>}
+          {datasetInfo && <span className="dataset-info">Loaded: {currentDataset}</span>}
         </div>
         <Controls 
           axis={axis} setAxis={setAxis}
