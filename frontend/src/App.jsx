@@ -60,15 +60,46 @@ function App() {
   };
 
   const testPath = async (pathToTest) => {
+    console.log("========================================");
     console.log("Testing path:", pathToTest);
+    console.log("Encoded path:", encodeURIComponent(pathToTest));
+    
     try {
-      const res = await fetch(`/api/test_path?path=${encodeURIComponent(pathToTest)}`);
+      const url = `/api/test_path?path=${encodeURIComponent(pathToTest)}`;
+      console.log("Full URL:", window.location.origin + url);
+      console.log("Fetching...");
+      
+      const res = await fetch(url);
+      console.log("Response status:", res.status);
+      console.log("Response ok:", res.ok);
+      
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("Error response:", text);
+        return {
+          error: true,
+          status: res.status,
+          message: text
+        };
+      }
+      
       const data = await res.json();
       console.log("Path test results:", data);
+      console.log("========================================");
       return data;
     } catch (err) {
-      console.error("Failed to test path:", err);
-      return null;
+      console.error("========================================");
+      console.error("Failed to test path - Exception caught");
+      console.error("Error type:", err.constructor.name);
+      console.error("Error message:", err.message);
+      console.error("Error stack:", err.stack);
+      console.error("========================================");
+      
+      return {
+        error: true,
+        message: err.message,
+        type: err.constructor.name
+      };
     }
   };
 
@@ -228,7 +259,31 @@ function App() {
               />
               <button onClick={handleSetDataDir} style={{ padding: '0.25rem 0.5rem' }}>Set</button>
               <button 
-                onClick={() => dataDir && testPath(dataDir).then(result => alert(JSON.stringify(result, null, 2)))} 
+                onClick={() => {
+                  if (!dataDir) {
+                    alert("Please enter a path first");
+                    return;
+                  }
+                  testPath(dataDir).then(result => {
+                    if (!result) {
+                      alert("Test returned null - check browser console for details");
+                    } else if (result.error) {
+                      alert(`Test Error:\n\n${result.message}\n\nCheck browser console for more details`);
+                    } else {
+                      const summary = `Path Test Results:
+
+Server: ${result.server_hostname}
+Path: ${result.path}
+Exists: ${result.exists ? 'YES ✓' : 'NO ✗'}
+Is Directory: ${result.is_dir ? 'YES ✓' : 'NO ✗'}
+Can Read: ${result.can_read ? 'YES ✓' : 'NO ✗'}
+${result.contents_count ? '\nItems in directory: ' + result.contents_count : ''}
+
+Full details in browser console (F12)`;
+                      alert(summary);
+                    }
+                  });
+                }} 
                 style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
                 title="Test if path exists on server"
               >
