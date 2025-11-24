@@ -71,16 +71,51 @@ vis-tool-3d/
 
 ## Remote Access (SSH Tunneling)
 
-To access the visualization tool from a remote machine (e.g., your laptop) while the server runs on a cluster/workstation:
+To access the visualization tool from a remote machine (e.g., your laptop) while the server runs on an HPC cluster or workstation:
 
-1.  **Start the tool** on the remote server as usual (backend and frontend).
-2.  **Create an SSH tunnel** from your local machine:
+### Setup Instructions
+
+1.  **Start the backend on the remote server:**
+    ```bash
+    # On the HPC server / remote workstation
+    cd /path/to/vis-tool-3d/backend
+    source ../venv/bin/activate
+    uvicorn main:app --host 0.0.0.0 --port 8000
+    ```
+
+2.  **Start the frontend on the remote server:**
+    ```bash
+    # On the HPC server / remote workstation (in a separate terminal)
+    cd /path/to/vis-tool-3d/frontend
+    npm run dev
+    ```
+
+3.  **Create an SSH tunnel from your local machine:**
+    ```bash
+    # On your local laptop/desktop
+    ssh -L 5173:localhost:5173 -L 8000:localhost:8000 user@remote_host
+    ```
+    Or if you only want to tunnel the frontend (recommended):
     ```bash
     ssh -L 5173:localhost:5173 user@remote_host
     ```
-3.  **Open your browser** to `http://localhost:5173`.
 
-The frontend (port 5173) will proxy API requests to the backend (port 8000) automatically, so you only need to tunnel port 5173.
+4.  **Open your browser** on your local machine to `http://localhost:5173`.
+
+### Important Notes for SSH Tunneling
+
+**⚠️ Data Directory Path:**
+- The **data directory path must exist on the HPC server**, not on your local machine
+- When you set the data directory in the web interface, enter a path that exists on the **remote server's filesystem**
+- Example: If your data is at `/scratch/username/simulations/` on the HPC server, enter that path (not a local path like `/Users/...` or `C:\...`)
+- The UI will display the backend server's hostname to help you identify which machine to use
+
+**How it works:**
+- The frontend (web interface) runs in your browser on your local machine
+- The backend (Python server) runs on the remote HPC server where your data is located
+- SSH tunneling connects them securely through the tunnel
+
+The frontend (port 5173) will proxy API requests to the backend (port 8000) automatically. You can tunnel both ports or just port 5173 (the backend will be accessed via the proxy).
 
 ## Configuration
 

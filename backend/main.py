@@ -58,19 +58,46 @@ class DataDirRequest(BaseModel):
 
 @app.get("/")
 def read_root():
-    return {"message": "QUOKKA Viz Tool Backend"}
+    import socket
+    hostname = socket.gethostname()
+    cwd = os.getcwd()
+    return {
+        "message": "QUOKKA Viz Tool Backend",
+        "server_hostname": hostname,
+        "current_working_directory": cwd,
+        "current_data_directory": DATA_DIR
+    }
 
 @app.post("/api/set_data_dir")
 def set_data_dir(request: DataDirRequest):
+    import socket
     global DATA_DIR
     path = request.path
+    hostname = socket.gethostname()
+    
     if not os.path.exists(path):
-        raise HTTPException(status_code=404, detail=f"Directory not found: {path}")
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Directory not found on server '{hostname}': {path}\n\nNote: When using SSH tunneling, the path must exist on the machine where the backend is running, not your local machine."
+        )
     if not os.path.isdir(path):
-        raise HTTPException(status_code=400, detail=f"Path is not a directory: {path}")
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Path is not a directory on server '{hostname}': {path}"
+        )
     
     DATA_DIR = path
-    return {"message": f"Data directory set to: {DATA_DIR}", "path": DATA_DIR}
+    return {"message": f"Data directory set to: {DATA_DIR} on server '{hostname}'", "path": DATA_DIR, "server": hostname}
+
+@app.get("/api/server_info")
+def get_server_info():
+    import socket
+    hostname = socket.gethostname()
+    return {
+        "hostname": hostname,
+        "current_data_directory": DATA_DIR,
+        "data_dir_exists": os.path.exists(DATA_DIR)
+    }
 
 @app.get("/api/datasets")
 def get_datasets(prefix: str = "plt"):

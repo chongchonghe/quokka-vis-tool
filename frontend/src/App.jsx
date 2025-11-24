@@ -12,6 +12,7 @@ function App() {
   const [datasetInfo, setDatasetInfo] = useState(null);
   
   const [dataDir, setDataDir] = useState('');
+  const [serverInfo, setServerInfo] = useState(null);
   
   const [datasetPrefix, setDatasetPrefix] = useState('plt');
   
@@ -41,8 +42,19 @@ function App() {
 
   useEffect(() => {
     // Load initial data
+    fetchServerInfo();
     fetchDatasets();
   }, []);
+
+  const fetchServerInfo = async () => {
+    try {
+      const res = await fetch('/api/server_info');
+      const data = await res.json();
+      setServerInfo(data);
+    } catch (err) {
+      console.error("Failed to fetch server info:", err);
+    }
+  };
 
   useEffect(() => {
     if (datasets.length > 0 && !currentDataset) {
@@ -88,11 +100,11 @@ function App() {
         fetchDatasets();
       } else {
         const err = await res.json();
-        alert(`Error: ${err.detail}`);
+        alert(`Error: ${err.detail}\n\nNote: Path must exist on the SERVER where the backend is running, not your local machine.`);
       }
     } catch (err) {
       console.error("Failed to set data directory:", err);
-      alert("Failed to set data directory");
+      alert("Failed to set data directory. The path must exist on the server where the backend is running.");
     }
   };
 
@@ -137,13 +149,20 @@ function App() {
       <div className="sidebar">
         <div className="sidebar-header">
           <h1>QUOKKA Viz Tool</h1>
+          {serverInfo && (
+            <div style={{ fontSize: '0.85rem', color: '#888', marginBottom: '0.5rem' }}>
+              Backend: <strong>{serverInfo.hostname}</strong>
+              <br />
+              Data Dir: {serverInfo.current_data_directory}
+            </div>
+          )}
           <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <input 
                 type="text" 
                 value={dataDir} 
                 onChange={(e) => setDataDir(e.target.value)} 
-                placeholder="/path/to/data"
+                placeholder={serverInfo ? "/path/on/" + serverInfo.hostname : "/path/to/data"}
                 style={{ flex: 1, padding: '0.25rem' }}
               />
               <button onClick={handleSetDataDir} style={{ padding: '0.25rem 0.5rem' }}>Set</button>
