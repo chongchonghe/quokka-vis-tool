@@ -65,6 +65,41 @@ vis-tool-3d/
     ```
     The app will be accessible at `http://localhost:5173`.
 
+## Quick Start Scripts (Recommended)
+
+For easier workflow, use the provided startup scripts:
+
+### Basic Usage
+
+```bash
+# Start both services (runs in background with logs)
+./start.sh
+
+# Check status
+./status.sh
+
+# Stop all services
+./stop.sh
+
+# Development mode (runs in foreground with live logs)
+./dev.sh
+```
+
+### What the scripts do:
+- **`start.sh`**: Starts both backend and frontend in the background
+  - Automatically loads Python venv (assumes npm is available via `.bashrc`)
+  - Logs saved to `~/scripts/logs/quokka-vis-tool/`
+  - Can be run from any directory
+  - Press Ctrl+C or run `./stop.sh` to stop
+
+- **`stop.sh`**: Stops all running services
+
+- **`status.sh`**: Shows current status and connectivity
+
+- **`dev.sh`**: Development mode with live logs and auto-reload
+
+See [SCRIPTS.md](SCRIPTS.md) for detailed usage and troubleshooting.
+
 ## Remote Access (SSH Tunneling)
 
 To access the visualization tool from a remote machine (e.g., your laptop) while the server runs on an HPC cluster or workstation:
@@ -146,3 +181,50 @@ cache_max_size: 32            # Number of images to cache in memory
 2.  Open the web interface.
 3.  Select a dataset and field to visualize.
 4.  Use the controls to slice, animate, and adjust the view.
+
+## Workflow Tips & Optimizations
+
+### For Remote Development on HPC
+
+1. **Use tmux or screen** for persistent sessions:
+   ```bash
+   # Start a tmux session
+   tmux new -s quokka-viz
+   
+   # Run the visualization tool
+   ./start.sh
+   
+   # Detach: Press Ctrl+b then d
+   # Reattach later: tmux attach -t quokka-viz
+   ```
+
+2. **SSH config for easier tunneling** (`~/.ssh/config` on your local machine):
+   ```
+   Host setonix
+       HostName setonix.pawsey.org.au
+       User your_username
+       LocalForward 5173 localhost:5173
+       LocalForward 9010 localhost:9010
+			 SessionType none
+   ```
+   Then simply: `ssh setonix`
+
+3. **Quick restart after code changes**:
+   ```bash
+   ./stop.sh && ./start.sh
+   ```
+   Or use `./dev.sh` for auto-reload during development
+
+4. **Monitor logs in real-time**:
+   ```bash
+   tail -f logs/backend.log logs/frontend.log
+   ```
+
+5. **Debugging**: Use `./dev.sh` instead of `./start.sh` to see live logs with color-coded output
+
+### Performance Tips
+
+- Increase `cache_max_size` in `backend/config.yaml` if you have lots of RAM
+- Lower `default_dpi` for faster rendering during exploration, increase for publication
+- Use the log scale toggle for fields with large dynamic range
+- The backend caches rendered images, so re-viewing the same slice is instant
