@@ -37,11 +37,7 @@ vis-tool-3d/
 ### 1. Backend Setup
 
 1.  Navigate to the project root.
-2.  Create and activate a virtual environment (optional but recommended):
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows: venv\Scripts\activate
-    ```
+2.  Create and activate a virtual environment via venv or uv and activate it.
 3.  Install dependencies:
     ```bash
     pip install -r requirements.txt
@@ -77,23 +73,24 @@ To access the visualization tool from a remote machine (e.g., your laptop) while
 
 1.  **Start the backend on the remote server:**
     ```bash
-    # On the HPC server / remote workstation
-    cd /path/to/vis-tool-3d/backend
-    source ../venv/bin/activate
-    uvicorn main:app --host 0.0.0.0 --port 8000
+    # On the HPC server (here on setonix)
+    cd /home/chongchong/softwares-setonix/quokka-vis-tool/backend
+    source ~/softwares-setonix/python-envs/uv-quokka-vis-tool/bin/activate
+    uvicorn main:app --host 0.0.0.0 --port 9010
     ```
 
 2.  **Start the frontend on the remote server:**
     ```bash
     # On the HPC server / remote workstation (in a separate terminal)
-    cd /path/to/vis-tool-3d/frontend
+    # Note: On Setonix, nvm should be loaded via .bashrc in login shells
+    cd /home/chongchong/softwares-setonix/quokka-vis-tool/frontend
     npm run dev
     ```
 
 3.  **Create an SSH tunnel from your local machine:**
     ```bash
     # On your local laptop/desktop
-    ssh -L 5173:localhost:5173 -L 8000:localhost:8000 user@remote_host
+    ssh -L 5173:localhost:5173 -L 9010:localhost:9010 user@remote_host
     ```
     Or if you only want to tunnel the frontend (recommended):
     ```bash
@@ -115,7 +112,20 @@ To access the visualization tool from a remote machine (e.g., your laptop) while
 - The backend (Python server) runs on the remote HPC server where your data is located
 - SSH tunneling connects them securely through the tunnel
 
-The frontend (port 5173) will proxy API requests to the backend (port 8000) automatically. You can tunnel both ports or just port 5173 (the backend will be accessed via the proxy).
+The frontend (port 5173) will proxy API requests to the backend automatically. You can tunnel both ports or just port 5173 (the backend will be accessed via the proxy).
+
+**⚠️ Important Port Configuration:**
+- If you use a port other than 8000 for the backend (e.g., port 9010), you **must** update `frontend/vite.config.js`
+- Change the proxy target to match your backend port:
+  ```javascript
+  proxy: {
+    '/api': {
+      target: 'http://localhost:9010',  // Match your backend port
+      changeOrigin: true,
+    },
+  },
+  ```
+- After changing the config, restart the frontend development server (`npm run dev`)
 
 ## Configuration
 
