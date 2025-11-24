@@ -55,10 +55,23 @@ except Exception as e:
 print()
 print("Loading backend module...")
 try:
-    # Change to backend directory
-    backend_dir = os.path.dirname(os.path.abspath(__file__))
-    os.chdir(os.path.join(backend_dir, 'backend'))
-    print(f"  Changed to: {os.getcwd()}")
+    # Find backend directory
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    backend_dir = os.path.join(script_dir, 'backend')
+    
+    print(f"  Script directory: {script_dir}")
+    print(f"  Backend directory: {backend_dir}")
+    
+    # Check if backend/main.py exists
+    main_py = os.path.join(backend_dir, 'main.py')
+    if not os.path.exists(main_py):
+        print(f"  ✗ main.py not found at: {main_py}")
+        exit(1)
+    else:
+        print(f"  ✓ Found main.py at: {main_py}")
+    
+    # Add backend to path
+    sys.path.insert(0, backend_dir)
     
     print("  Importing main module...")
     import main
