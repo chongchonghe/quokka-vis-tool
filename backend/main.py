@@ -228,7 +228,9 @@ def get_slice(
             divider = make_axes_locatable(ax)
             
             # Colorbar always on the right
-            cax = divider.append_axes("right", size=f"{COLORMAP_FRACTION*100}%", pad=0.05)
+            # Width is 1/SCALE_BAR_HEIGHT_FRACTION of the short axis (SHORT_SIZE)
+            cbar_width_inches = SHORT_SIZE / SCALE_BAR_HEIGHT_FRACTION
+            cax = divider.append_axes("right", size=cbar_width_inches, pad=0.05)
             cbar = fig.colorbar(im, cax=cax, orientation="vertical")
             
             # Set colorbar label
