@@ -1,4 +1,4 @@
-yt
+yt[quokka] @ git+https://github.com/chongchonghe/yt.git
 fastapi
 uvicorn
 numpy

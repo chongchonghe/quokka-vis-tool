@@ -284,11 +284,23 @@ def get_fields():
     if ds is None:
         raise HTTPException(status_code=400, detail="No dataset loaded")
     
-    # Return a list of fluid fields
+    # Add derived fields if not already present
+    if ("gas", "temperature") not in ds.derived_field_list:
+        _add_derived_fields(ds)
+    
+    # Return a list of gas fields (with the custom yt fork, all fields are in the "gas" namespace)
     # ds.field_list is a list of tuples (field_type, field_name)
-    # We only want the field_name for boxlib fields
-    fields = [f[1] for f in ds.field_list if f[0] == 'boxlib']
-    return {"fields": fields}
+    # We want the field_name for gas fields
+    fields = [f[1] for f in ds.field_list if f[0] == 'gas']
+    
+    # Also include derived fields
+    derived_fields = [f[1] for f in ds.derived_field_list if f[0] == 'gas']
+    
+    # Combine and remove duplicates
+    all_fields = list(set(fields + derived_fields))
+    all_fields.sort()
+    
+    return {"fields": all_fields}
 
 
 # Load config for cache size
@@ -341,36 +353,23 @@ def _generate_plot_image(
 
     # Add derived fields if they are not already present (in case ds was loaded but fields not added)
     # This check is cheap
-    if ("gas", "temperature") not in ds.derived_field_list and ("boxlib", "temperature") not in ds.derived_field_list:
+    if ("gas", "temperature") not in ds.derived_field_list:
          _add_derived_fields(ds)
 
-    field_tuple = ("boxlib", field)
-    # Check if field is a derived field we added
-    if field in ["temperature", "velocity_magnitude", "momentum_density", "number_density"]:
-        field_tuple = ("gas", field)
+    # With the custom yt fork, all fields are defined as ("gas", field_name)
+    field_tuple = ("gas", field)
     
-    # Fallback: if ("boxlib", field) is not found, check if ("gas", field) exists
-    # This handles cases where we aliased gasDensity to ("gas", "density") but user requested "density"
-    # which defaults to ("boxlib", "density")
-    if field_tuple not in ds.derived_field_list and field_tuple not in ds.field_list:
-        if ("gas", field) in ds.derived_field_list:
-            field_tuple = ("gas", field)
-        elif ("boxlib", field) not in ds.field_list:
-             # Try to find a match in field_list
-             # This is a bit hacky but might save us
-             pass
-
     # Handle weight field for projections
     weight = None
     if kind == "prj" and weight_field and weight_field != "None":
         if weight_field == "density":
             weight = ("gas", "density")
         elif weight_field == "cell_volume":
-            weight = ("boxlib", "volume") # or ("index", "cell_volume") depending on yt version/frontend
+            weight = ("index", "cell_volume")  # Standard yt field for cell volume
         elif weight_field == "cell_mass":
             weight = ("gas", "cell_mass")
         else:
-            weight = ("boxlib", weight_field)
+            weight = ("gas", weight_field)
 
     if kind == "slc":
         slc = yt.SlicePlot(ds, axis, field_tuple, center=ds.domain_center)
@@ -575,69 +574,39 @@ def _generate_plot_image(
     return buf.getvalue()
 
 def _add_derived_fields(ds):
+    """
+    Add derived fields to the dataset.
+    With the custom yt fork, standard fields like density, velocity_x, etc. are already
+    defined as ("gas", "density"), ("gas", "velocity_x"), etc.
+    We only need to add the custom derived fields like temperature, velocity_magnitude, etc.
+    """
     # Constants
     m_u = 1.660539e-24 * unyt.g
     kelvin = unyt.K
     k_B = unyt.physical_constants.boltzmann_constant
     gamma = 5.0 / 3.0
-    mean_molecular_weight = 1.0 # Default to 1.0 for now, could be parameterized
+    mean_molecular_weight = 1.0  # Default to 1.0 for now, could be parameterized
     mean_molecular_weight_per_H_atom = mean_molecular_weight * m_u
-
-    # Alias gasDensity to ("gas", "density") if needed
-    if ("gas", "density") not in ds.derived_field_list:
-        if ("boxlib", "gasDensity") in ds.field_list:
-            ds.add_field(("gas", "density"), function=lambda field, data: data[("boxlib", "gasDensity")] * unyt.g / unyt.cm**3, units="g/cm**3", sampling_type="cell", force_override=True)
-    
-    # Alias velocity components if needed (x-GasMomentum / gasDensity)
-    # This is getting complicated. If the dataset has 'x-GasMomentum', it's likely momentum density.
-    # Velocity = Momentum / Density
-    if ("gas", "velocity_x") not in ds.derived_field_list:
-        if ("boxlib", "x-GasMomentum") in ds.field_list and ("gas", "density") in ds.derived_field_list:
-             ds.add_field(("gas", "velocity_x"), function=lambda field, data: (data[("boxlib", "x-GasMomentum")] * unyt.g / (unyt.cm**2 * unyt.s)) / data[("gas", "density")], units="cm/s", sampling_type="cell", force_override=True)
-    if ("gas", "velocity_y") not in ds.derived_field_list:
-        if ("boxlib", "y-GasMomentum") in ds.field_list and ("gas", "density") in ds.derived_field_list:
-             ds.add_field(("gas", "velocity_y"), function=lambda field, data: (data[("boxlib", "y-GasMomentum")] * unyt.g / (unyt.cm**2 * unyt.s)) / data[("gas", "density")], units="cm/s", sampling_type="cell", force_override=True)
-    if ("gas", "velocity_z") not in ds.derived_field_list:
-        if ("boxlib", "z-GasMomentum") in ds.field_list and ("gas", "density") in ds.derived_field_list:
-             ds.add_field(("gas", "velocity_z"), function=lambda field, data: (data[("boxlib", "z-GasMomentum")] * unyt.g / (unyt.cm**2 * unyt.s)) / data[("gas", "density")], units="cm/s", sampling_type="cell", force_override=True)
-
-    # Total Energy Density
-    if ("gas", "total_energy_density") not in ds.derived_field_list:
-        if ("boxlib", "gasEnergy") in ds.field_list:
-             # gasEnergy might be energy density or specific energy.
-             # If it's energy density, it should have units of pressure (erg/cm^3).
-             # If it's dimensionless in the file, we might need to multiply by a unit or assume code units.
-             # Let's try to infer from the dataset.
-             # For now, let's assume it's in code units which map to erg/cm^3 if properly scaled.
-             # But yt complains it's dimensionless.
-             # We can force units.
-             ds.add_field(("gas", "total_energy_density"), function=lambda field, data: data[("boxlib", "gasEnergy")] * unyt.erg / unyt.cm**3, units="erg/cm**3", sampling_type="cell", force_override=True)
-
 
     # Number Density
     if ("gas", "number_density") not in ds.derived_field_list:
         def _number_density(field, data):
-             return data[("gas", "density")] / mean_molecular_weight_per_H_atom
+            return data[("gas", "density")] / mean_molecular_weight_per_H_atom
         ds.add_field(("gas", "number_density"), function=_number_density, units="cm**-3", sampling_type="cell", force_override=True)
 
-    # Temperature
+    # Temperature (if not already present)
     if ("gas", "temperature") not in ds.derived_field_list:
-        if ("boxlib", "temperature") in ds.field_list:
-             def _temperature_boxlib(field, data):
-                 return data[("boxlib", "temperature")] * kelvin
-             ds.add_field(("gas", "temperature"), function=_temperature_boxlib, units="K", sampling_type="cell", force_override=True)
-        else:
-            def _temperature_derived(field, data):
-                etot = data[("gas", "total_energy_density")]
-                density = data[("gas", "density")]
-                kinetic_energy = 0.5 * density * (
-                    data[("gas", "velocity_x")]**2 + 
-                    data[("gas", "velocity_y")]**2 + 
-                    data[("gas", "velocity_z")]**2
-                )
-                eint = etot - kinetic_energy
-                return eint * (gamma - 1.0) / (density / mean_molecular_weight_per_H_atom * k_B)
-            ds.add_field(("gas", "temperature"), function=_temperature_derived, units="K", sampling_type="cell", force_override=True)
+        def _temperature_derived(field, data):
+            etot = data[("gas", "total_energy_density")]
+            density = data[("gas", "density")]
+            kinetic_energy = 0.5 * density * (
+                data[("gas", "velocity_x")]**2 + 
+                data[("gas", "velocity_y")]**2 + 
+                data[("gas", "velocity_z")]**2
+            )
+            eint = etot - kinetic_energy
+            return eint * (gamma - 1.0) / (density / mean_molecular_weight_per_H_atom * k_B)
+        ds.add_field(("gas", "temperature"), function=_temperature_derived, units="K", sampling_type="cell", force_override=True)
 
     # Velocity Magnitude
     if ("gas", "velocity_magnitude") not in ds.derived_field_list:
@@ -657,19 +626,7 @@ def _add_derived_fields(ds):
                 data[("gas", "momentum_density_y")]**2 + 
                 data[("gas", "momentum_density_z")]**2
             )
-        # Check if we have components
-        if ("gas", "momentum_density_x") in ds.derived_field_list:
-             ds.add_field(("gas", "momentum_density"), function=_momentum_density, sampling_type="cell", force_override=True)
-        elif ("boxlib", "x-GasMomentum") in ds.field_list:
-             # Alias components first if needed? 
-             # Or just use them directly
-             def _momentum_density_direct(field, data):
-                 return np.sqrt(
-                     (data[("boxlib", "x-GasMomentum")] * unyt.g / (unyt.cm**2 * unyt.s))**2 + 
-                     (data[("boxlib", "y-GasMomentum")] * unyt.g / (unyt.cm**2 * unyt.s))**2 + 
-                     (data[("boxlib", "z-GasMomentum")] * unyt.g / (unyt.cm**2 * unyt.s))**2
-                 )
-             ds.add_field(("gas", "momentum_density"), function=_momentum_density_direct, sampling_type="cell", force_override=True)
+        ds.add_field(("gas", "momentum_density"), function=_momentum_density, sampling_type="cell", force_override=True)
 
 
 @app.get("/api/slice")
