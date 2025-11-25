@@ -19,8 +19,7 @@ A high-performance, browser-based visualization tool for 3D astrophysical simula
 vis-tool-3d/
 ├── backend/          # Python FastAPI server
 │   ├── main.py       # API endpoints and image generation
-│   ├── config.yaml   # Configuration (font size, DPI, cache size, etc.)
-│   └── utils.py      # Utility functions
+│   └── config.yaml   # Configuration (font size, DPI, cache size, etc.)
 ├── frontend/         # React application
 │   ├── src/          # Source code (components, App.jsx)
 │   └── ...
@@ -37,11 +36,7 @@ vis-tool-3d/
 ### 1. Backend Setup
 
 1.  Navigate to the project root.
-2.  Create and activate a virtual environment (optional but recommended):
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows: venv\Scripts\activate
-    ```
+2.  Create and activate a virtual environment via venv or uv and activate it.
 3.  Install dependencies:
     ```bash
     pip install -r requirements.txt
@@ -69,6 +64,41 @@ vis-tool-3d/
     ```
     The app will be accessible at `http://localhost:5173`.
 
+## Quick Start Scripts (Recommended)
+
+For easier workflow, use the provided startup scripts:
+
+### Basic Usage
+
+```bash
+# Start both services (runs in background with logs)
+./start.sh
+
+# Check status
+./status.sh
+
+# Stop all services
+./stop.sh
+
+# Development mode (runs in foreground with live logs)
+./dev.sh
+```
+
+### What the scripts do:
+- **`start.sh`**: Starts both backend and frontend in the background
+  - Automatically loads Python venv (assumes npm is available via `.bashrc`)
+  - Logs saved to `~/scripts/logs/quokka-vis-tool/`
+  - Can be run from any directory
+  - Press Ctrl+C or run `./stop.sh` to stop
+
+- **`stop.sh`**: Stops all running services
+
+- **`status.sh`**: Shows current status and connectivity
+
+- **`dev.sh`**: Development mode with live logs and auto-reload
+
+See [SCRIPTS.md](SCRIPTS.md) for detailed usage and troubleshooting.
+
 ## Remote Access (SSH Tunneling)
 
 To access the visualization tool from a remote machine (e.g., your laptop) while the server runs on an HPC cluster or workstation:
@@ -77,23 +107,24 @@ To access the visualization tool from a remote machine (e.g., your laptop) while
 
 1.  **Start the backend on the remote server:**
     ```bash
-    # On the HPC server / remote workstation
-    cd /path/to/vis-tool-3d/backend
-    source ../venv/bin/activate
-    uvicorn main:app --host 0.0.0.0 --port 8000
+    # On the HPC server (here on setonix)
+    cd /home/chongchong/softwares-setonix/quokka-vis-tool/backend
+    source ~/softwares-setonix/python-envs/uv-quokka-vis-tool/bin/activate
+    uvicorn main:app --host 0.0.0.0 --port 9010
     ```
 
 2.  **Start the frontend on the remote server:**
     ```bash
     # On the HPC server / remote workstation (in a separate terminal)
-    cd /path/to/vis-tool-3d/frontend
+    # Note: On Setonix, nvm should be loaded via .bashrc in login shells
+    cd /home/chongchong/softwares-setonix/quokka-vis-tool/frontend
     npm run dev
     ```
 
 3.  **Create an SSH tunnel from your local machine:**
     ```bash
     # On your local laptop/desktop
-    ssh -L 5173:localhost:5173 -L 8000:localhost:8000 user@remote_host
+    ssh -L 5173:localhost:5173 -L 9010:localhost:9010 user@remote_host
     ```
     Or if you only want to tunnel the frontend (recommended):
     ```bash
@@ -115,7 +146,20 @@ To access the visualization tool from a remote machine (e.g., your laptop) while
 - The backend (Python server) runs on the remote HPC server where your data is located
 - SSH tunneling connects them securely through the tunnel
 
-The frontend (port 5173) will proxy API requests to the backend (port 8000) automatically. You can tunnel both ports or just port 5173 (the backend will be accessed via the proxy).
+The frontend (port 5173) will proxy API requests to the backend automatically. You can tunnel both ports or just port 5173 (the backend will be accessed via the proxy).
+
+**⚠️ Important Port Configuration:**
+- If you use a port other than 8000 for the backend (e.g., port 9010), you **must** update `frontend/vite.config.js`
+- Change the proxy target to match your backend port:
+  ```javascript
+  proxy: {
+    '/api': {
+      target: 'http://localhost:9010',  // Match your backend port
+      changeOrigin: true,
+    },
+  },
+  ```
+- After changing the config, restart the frontend development server (`npm run dev`)
 
 ## Configuration
 
@@ -136,3 +180,50 @@ cache_max_size: 32            # Number of images to cache in memory
 2.  Open the web interface.
 3.  Select a dataset and field to visualize.
 4.  Use the controls to slice, animate, and adjust the view.
+
+## Workflow Tips & Optimizations
+
+### For Remote Development on HPC
+
+1. **Use tmux or screen** for persistent sessions:
+   ```bash
+   # Start a tmux session
+   tmux new -s quokka-viz
+   
+   # Run the visualization tool
+   ./start.sh
+   
+   # Detach: Press Ctrl+b then d
+   # Reattach later: tmux attach -t quokka-viz
+   ```
+
+2. **SSH config for easier tunneling** (`~/.ssh/config` on your local machine):
+   ```
+   Host setonix
+       HostName setonix.pawsey.org.au
+       User your_username
+       LocalForward 5173 localhost:5173
+       LocalForward 9010 localhost:9010
+			 SessionType none
+   ```
+   Then simply: `ssh setonix`
+
+3. **Quick restart after code changes**:
+   ```bash
+   ./stop.sh && ./start.sh
+   ```
+   Or use `./dev.sh` for auto-reload during development
+
+4. **Monitor logs in real-time**:
+   ```bash
+   tail -f logs/backend.log logs/frontend.log
+   ```
+
+5. **Debugging**: Use `./dev.sh` instead of `./start.sh` to see live logs with color-coded output
+
+### Performance Tips
+
+- Increase `cache_max_size` in `backend/config.yaml` if you have lots of RAM
+- Lower `default_dpi` for faster rendering during exploration, increase for publication
+- Use the log scale toggle for fields with large dynamic range
+- The backend caches rendered images, so re-viewing the same slice is instant

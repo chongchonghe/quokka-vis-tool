@@ -1,0 +1,20 @@
+# Optional bash aliases for QUOKKA Viz Tool
+# Add these to your ~/.bashrc for even easier access
+
+# Start/stop/status from anywhere
+alias qviz-start='~/softwares-setonix/quokka-vis-tool/start.sh'
+alias qviz-stop='~/softwares-setonix/quokka-vis-tool/stop.sh'
+alias qviz-status='~/softwares-setonix/quokka-vis-tool/status.sh'
+alias qviz-dev='~/softwares-setonix/quokka-vis-tool/dev.sh'
+alias qviz-logs='tail -f ~/scripts/logs/quokka-vis-tool/*.log'
+
+# Quick navigation
+alias qviz='cd ~/softwares-setonix/quokka-vis-tool'
+
+# Usage after adding to .bashrc:
+#   qviz-start    # Start the visualization tool
+#   qviz-status   # Check status
+#   qviz-stop     # Stop services
+#   qviz-logs     # Watch logs in real-time
+#   qviz          # Go to project directory
+
