@@ -43,7 +43,7 @@ def load_config():
 # We can keep defaults as fallback
 DEFAULT_CONFIG = {
     "short_size": 3.6,
-    "font_size": 10,
+    "font_size": 20,
     "scale_bar_height_fraction": 15,
     "default_dpi": 300
 }
@@ -467,22 +467,7 @@ def _generate_plot_image(
         slc.annotate_grids(edgecolors='white', linewidth=1)
     
     if timestamp:
-        slc.annotate_timestamp()
-    
-    if scale_bar_size is not None and scale_bar_unit is not None:
-        # Use custom scale bar size
-        slc.annotate_scale(coeff=scale_bar_size, unit=scale_bar_unit, corner='lower_left')
-    elif show_scale_bar:
-        # Use automatic scale bar (20% of width)
-        slc.annotate_scale(corner='lower_right')
-    
-    if top_left_text:
-        slc.annotate_text((0.02, 0.98), top_left_text, coord_system='axis', text_args={
-                          'color': 'white', 'verticalalignment': 'top', 'horizontalalignment': 'left'})
-    
-    if top_right_text:
-        slc.annotate_text((0.98, 0.98), top_right_text, coord_system='axis', text_args={
-                          'color': 'white', 'verticalalignment': 'top', 'horizontalalignment': 'right'})
+        slc.annotate_timestamp(corner='upper_left')
     
     # ========================================
     # Configure figure properties
@@ -496,18 +481,44 @@ def _generate_plot_image(
     Wy = ds.domain_width[y_ax_id].v
     aspect = float(Wy / Wx)
     
+    scale_bar_x_loc = 0.5 if aspect > 1.3 else 0.15
+    scale_bar_y_loc = 0.15 if aspect < 1/1.3 else 0.1
+    scale_bar_pos = (scale_bar_x_loc, scale_bar_y_loc)
+    if scale_bar_size is not None and scale_bar_unit is not None:
+        # Use custom scale bar size - positioned at lower center using pos parameter
+        slc.annotate_scale(coeff=scale_bar_size, unit=scale_bar_unit, 
+                          pos=scale_bar_pos, coord_system='axis',
+                          min_frac=0.05, max_frac=0.16,
+                          size_bar_args={'pad': 0.55, 'sep': 8, 'borderpad': 5, 'color': 'w'})
+    elif show_scale_bar:
+        # Use automatic scale bar (20% of width) - positioned at lower center
+        slc.annotate_scale(pos=scale_bar_pos, coord_system='axis',
+                          min_frac=0.05, max_frac=0.16,
+                          size_bar_args={'pad': 0.55, 'sep': 8, 'borderpad': 5, 'color': 'w'})
+    
+    if top_left_text:
+        slc.annotate_text((0.02, 0.98), top_left_text, coord_system='axis', text_args={
+                          'color': 'white', 'verticalalignment': 'top', 'horizontalalignment': 'left'})
+    
+    if top_right_text:
+        slc.annotate_text((0.98, 0.98), top_right_text, coord_system='axis', text_args={
+                          'color': 'white', 'verticalalignment': 'top', 'horizontalalignment': 'right'})
+    
+    is_close_to_square = aspect < 4.1 / 3 and aspect > 3.0 / 4.1
     if aspect > 1:
         # Height > Width. Width is short side.
         fig_width = short_size
         fig_height = short_size * aspect
         # set_figure_size sets the long dimension
-        slc.set_figure_size(fig_height)
+        fig_size = fig_height * 1.5 if is_close_to_square else fig_height
+        slc.set_figure_size(fig_size)
     else:
         # Width >= Height. Height is short side.
         fig_height = short_size
         fig_width = short_size / aspect
         # set_figure_size sets the long dimension
-        slc.set_figure_size(fig_width)
+        fig_size = fig_width * 1.5 if is_close_to_square else fig_width
+        slc.set_figure_size(fig_size)
     slc.set_font_size(font_size)
     
     # ========================================
@@ -527,7 +538,7 @@ def _generate_plot_image(
         tmp_path = tmp_file.name
     
     try:
-        slc.save(tmp_path, mpl_kwargs={"dpi": dpi, "bbox_inches": "tight", "pad_inches": 0.1})
+        slc.save(tmp_path, mpl_kwargs={"dpi": dpi, "bbox_inches": "tight", "pad_inches": 0.05})
         # Read the saved file into bytes
         with open(tmp_path, 'rb') as f:
             image_bytes = f.read()
