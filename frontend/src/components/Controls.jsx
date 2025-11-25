@@ -29,7 +29,14 @@ function Controls({
   grids, setGrids,
   timestamp, setTimestamp,
   topLeftText, setTopLeftText,
-  topRightText, setTopRightText
+  topRightText, setTopRightText,
+  // Export props
+  onExportCurrentFrame,
+  onExportAnimation,
+  isExporting,
+  exportProgress,
+  exportFps,
+  setExportFps
 }) {
   return (
     <div className="controls-container">
@@ -251,6 +258,53 @@ function Controls({
           onChange={(e) => setDpi(Number(e.target.value))}
           step="10"
         />
+      </div>
+
+      <div className="control-group">
+        <label>Export:</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <button 
+            onClick={onExportCurrentFrame} 
+            disabled={isExporting}
+            style={{ width: '100%' }}
+          >
+            Export Current Frame (PNG)
+          </button>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <label style={{ fontWeight: 'normal', fontSize: '0.9rem', minWidth: '60px' }}>FPS:</label>
+              <select 
+                value={exportFps} 
+                onChange={(e) => setExportFps(Number(e.target.value))}
+                style={{ flex: 1 }}
+              >
+                {[1, 3, 5, 10, 15, 30].map(val => (
+                  <option key={val} value={val}>{val}</option>
+                ))}
+              </select>
+            </div>
+            <button 
+              onClick={onExportAnimation} 
+              disabled={isExporting}
+              style={{ width: '100%' }}
+            >
+              Export Animation (ZIP)
+            </button>
+          </div>
+
+          {exportProgress && (
+            <div style={{ 
+              fontSize: '0.85rem', 
+              color: isExporting ? '#4CAF50' : '#888',
+              fontStyle: 'italic',
+              textAlign: 'center',
+              padding: '0.25rem'
+            }}>
+              {exportProgress}
+            </div>
+          )}
+        </div>
       </div>
       
       <button onClick={onRefresh}>Refresh</button>

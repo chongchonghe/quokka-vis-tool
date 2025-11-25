@@ -18,6 +18,11 @@ import logging
 import sys
 import traceback
 import socket
+import subprocess
+import tempfile
+import zipfile
+from datetime import datetime
+import shutil
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -723,6 +728,317 @@ def get_fields():
     # Sort and unique
     fields = sorted(list(set(fields)))
     return {"fields": fields}
+
+@app.get("/api/export/current_frame")
+def export_current_frame(
+    axis: str = "z", 
+    field: str = "density", 
+    kind: str = "slc",
+    weight_field: Optional[str] = None,
+    coord: Optional[float] = None,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    show_colorbar: bool = False,
+    log_scale: bool = True,
+    colorbar_label: Optional[str] = None,
+    colorbar_orientation: str = "right",
+    cmap: str = "viridis",
+    dpi: int = 300,
+    show_scale_bar: bool = False,
+    scale_bar_size: Optional[float] = None,
+    scale_bar_unit: Optional[str] = None,
+    width_value: Optional[float] = None,
+    width_unit: Optional[str] = None,
+    particles: Optional[str] = None,
+    grids: bool = False,
+    timestamp: bool = False,
+    top_left_text: Optional[str] = None,
+    top_right_text: Optional[str] = None
+):
+    """Export the current frame as a downloadable PNG file"""
+    global ds, current_dataset_path
+    if ds is None:
+        raise HTTPException(status_code=400, detail="No dataset loaded")
+    
+    # Load configuration
+    config = load_config()
+    SHORT_SIZE = config.get("short_size", 3.6)
+    FONT_SIZE = config.get("font_size", 20)
+    SCALE_BAR_HEIGHT_FRACTION = config.get("scale_bar_height_fraction", 15)
+    COLORMAP_FRACTION = config.get("colormap_fraction", 0.1)
+    SHOW_AXES = config.get("show_axes", False)
+
+    # Parse particles
+    particle_list = tuple(p.strip() for p in particles.split(',')) if particles else ()
+
+    try:
+        if coord is None:
+            coord = ds.domain_center[ds.coordinates.axis_id[axis]]
+            coord = float(coord)
+        
+        image_bytes = _generate_plot_image(
+            current_dataset_path,
+            kind,
+            axis,
+            field,
+            weight_field,
+            coord,
+            vmin,
+            vmax,
+            show_colorbar,
+            log_scale,
+            colorbar_label,
+            colorbar_orientation,
+            cmap,
+            dpi,
+            show_scale_bar,
+            scale_bar_size,
+            scale_bar_unit,
+            width_value,
+            width_unit,
+            particle_list,
+            grids,
+            timestamp,
+            top_left_text,
+            top_right_text,
+            SHORT_SIZE,
+            FONT_SIZE,
+            SCALE_BAR_HEIGHT_FRACTION,
+            COLORMAP_FRACTION,
+            SHOW_AXES
+        )
+        
+        # Get current dataset name
+        dataset_name = os.path.basename(current_dataset_path)
+        filename = f"{dataset_name}_{field}_{axis}.png"
+        
+        return Response(
+            content=image_bytes, 
+            media_type="image/png",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+
+    except Exception as e:
+        print(f"Error generating plot: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/export/animation")
+def export_animation(request: Request):
+    """
+    Export animation as PNG frames + GIF + MP4 bundled in a ZIP file.
+    Expects JSON body with:
+    - datasets: list of dataset filenames
+    - fps: frames per second for GIF/MP4
+    - all visualization parameters (axis, field, etc.)
+    """
+    global DATA_DIR
+    
+    try:
+        # Parse request body
+        import asyncio
+        body = asyncio.run(request.json())
+        
+        datasets = body.get("datasets", [])
+        fps = body.get("fps", 5)
+        
+        # Visualization parameters
+        axis = body.get("axis", "z")
+        field = body.get("field", "density")
+        kind = body.get("kind", "slc")
+        weight_field = body.get("weight_field")
+        vmin = body.get("vmin")
+        vmax = body.get("vmax")
+        show_colorbar = body.get("show_colorbar", False)
+        log_scale = body.get("log_scale", True)
+        colorbar_label = body.get("colorbar_label")
+        colorbar_orientation = body.get("colorbar_orientation", "right")
+        cmap = body.get("cmap", "viridis")
+        dpi = body.get("dpi", 300)
+        show_scale_bar = body.get("show_scale_bar", False)
+        scale_bar_size = body.get("scale_bar_size")
+        scale_bar_unit = body.get("scale_bar_unit")
+        width_value = body.get("width_value")
+        width_unit = body.get("width_unit")
+        particles = body.get("particles", "")
+        grids = body.get("grids", False)
+        timestamp_anno = body.get("timestamp", False)
+        top_left_text = body.get("top_left_text")
+        top_right_text = body.get("top_right_text")
+        
+        if not datasets:
+            raise HTTPException(status_code=400, detail="No datasets provided")
+        
+        # Load configuration
+        config = load_config()
+        SHORT_SIZE = config.get("short_size", 3.6)
+        FONT_SIZE = config.get("font_size", 20)
+        SCALE_BAR_HEIGHT_FRACTION = config.get("scale_bar_height_fraction", 15)
+        COLORMAP_FRACTION = config.get("colormap_fraction", 0.1)
+        SHOW_AXES = config.get("show_axes", False)
+        
+        # Parse particles
+        particle_list = tuple(p.strip() for p in particles.split(',')) if particles else ()
+        
+        # Create temporary directory for all files
+        temp_dir = tempfile.mkdtemp()
+        
+        try:
+            # Generate PNG frames
+            print(f"Generating {len(datasets)} frames...")
+            for idx, dataset_name in enumerate(datasets):
+                dataset_path = os.path.join(DATA_DIR, dataset_name)
+                
+                if not os.path.exists(dataset_path):
+                    print(f"Warning: Dataset not found: {dataset_path}")
+                    continue
+                
+                # Load dataset
+                ds_temp = yt.load(dataset_path)
+                _add_derived_fields(ds_temp)
+                
+                # Get coordinate
+                coord = ds_temp.domain_center[ds_temp.coordinates.axis_id[axis]]
+                coord = float(coord)
+                
+                # Generate image
+                image_bytes = _generate_plot_image(
+                    dataset_path,
+                    kind,
+                    axis,
+                    field,
+                    weight_field,
+                    coord,
+                    vmin,
+                    vmax,
+                    show_colorbar,
+                    log_scale,
+                    colorbar_label,
+                    colorbar_orientation,
+                    cmap,
+                    dpi,
+                    show_scale_bar,
+                    scale_bar_size,
+                    scale_bar_unit,
+                    width_value,
+                    width_unit,
+                    particle_list,
+                    grids,
+                    timestamp_anno,
+                    top_left_text,
+                    top_right_text,
+                    SHORT_SIZE,
+                    FONT_SIZE,
+                    SCALE_BAR_HEIGHT_FRACTION,
+                    COLORMAP_FRACTION,
+                    SHOW_AXES
+                )
+                
+                # Save PNG frame
+                frame_filename = f"frame_{idx:04d}_{dataset_name}_{field}_{axis}.png"
+                frame_path = os.path.join(temp_dir, frame_filename)
+                with open(frame_path, 'wb') as f:
+                    f.write(image_bytes)
+                
+                print(f"Generated frame {idx + 1}/{len(datasets)}: {frame_filename}")
+            
+            # Check if ffmpeg is available
+            try:
+                subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True)
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                raise HTTPException(
+                    status_code=500, 
+                    detail="ffmpeg is not available in PATH. Please install ffmpeg to use animation export."
+                )
+            
+            # Create GIF using ffmpeg
+            print("Creating animated GIF...")
+            gif_filename = f"animation_{field}_{axis}.gif"
+            gif_path = os.path.join(temp_dir, gif_filename)
+            palette_path = os.path.join(temp_dir, "palette.png")
+            
+            # Generate palette for better quality GIF
+            palette_cmd = [
+                "ffmpeg", "-y",
+                "-framerate", str(fps),
+                "-pattern_type", "glob",
+                "-i", os.path.join(temp_dir, "frame_*.png"),
+                "-vf", "palettegen",
+                palette_path
+            ]
+            subprocess.run(palette_cmd, capture_output=True, check=True)
+            
+            # Create GIF with palette
+            gif_cmd = [
+                "ffmpeg", "-y",
+                "-framerate", str(fps),
+                "-pattern_type", "glob",
+                "-i", os.path.join(temp_dir, "frame_*.png"),
+                "-i", palette_path,
+                "-lavfi", "paletteuse",
+                gif_path
+            ]
+            subprocess.run(gif_cmd, capture_output=True, check=True)
+            print(f"Created GIF: {gif_filename}")
+            
+            # Create MP4 using ffmpeg
+            print("Creating MP4 video...")
+            mp4_filename = f"animation_{field}_{axis}.mp4"
+            mp4_path = os.path.join(temp_dir, mp4_filename)
+            
+            mp4_cmd = [
+                "ffmpeg", "-y",
+                "-framerate", str(fps),
+                "-pattern_type", "glob",
+                "-i", os.path.join(temp_dir, "frame_*.png"),
+                "-c:v", "libx264",
+                "-pix_fmt", "yuv420p",
+                mp4_path
+            ]
+            subprocess.run(mp4_cmd, capture_output=True, check=True)
+            print(f"Created MP4: {mp4_filename}")
+            
+            # Create ZIP file
+            print("Creating ZIP archive...")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            zip_filename = f"export_{field}_{axis}_{timestamp}.zip"
+            zip_path = os.path.join(temp_dir, zip_filename)
+            
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                # Add all PNG frames
+                for filename in sorted(os.listdir(temp_dir)):
+                    if filename.startswith("frame_") and filename.endswith(".png"):
+                        zipf.write(os.path.join(temp_dir, filename), filename)
+                
+                # Add GIF and MP4
+                zipf.write(gif_path, gif_filename)
+                zipf.write(mp4_path, mp4_filename)
+            
+            print(f"Created ZIP: {zip_filename}")
+            
+            # Read ZIP file into memory
+            with open(zip_path, 'rb') as f:
+                zip_bytes = f.read()
+            
+            return Response(
+                content=zip_bytes,
+                media_type="application/zip",
+                headers={
+                    "Content-Disposition": f"attachment; filename={zip_filename}"
+                }
+            )
+            
+        finally:
+            # Clean up temporary directory
+            print(f"Cleaning up temporary directory: {temp_dir}")
+            shutil.rmtree(temp_dir, ignore_errors=True)
+    
+    except Exception as e:
+        print(f"Error exporting animation: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

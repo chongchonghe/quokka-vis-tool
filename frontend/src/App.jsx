@@ -59,6 +59,11 @@ function App() {
   const [appliedTopLeftText, setAppliedTopLeftText] = useState('');
   const [appliedTopRightText, setAppliedTopRightText] = useState('');
 
+  // Export state
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState('');
+  const [exportFps, setExportFps] = useState(5);
+
 
   useEffect(() => {
     // Load initial data
@@ -270,6 +275,149 @@ function App() {
     setRefreshTrigger(prev => prev + 1);
   };
 
+  const handleExportCurrentFrame = async () => {
+    if (!field) {
+      alert('No field selected');
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      setExportProgress('Exporting current frame...');
+
+      // Build URL with all current settings
+      let url = `/api/export/current_frame?axis=${axis}&field=${field}&kind=${appliedPlotType}&log_scale=${logScale}&cmap=${cmap}&dpi=${appliedDpi || 300}&show_colorbar=${showColorbar}&show_scale_bar=${showScaleBar}`;
+      
+      if (appliedWeightField && appliedWeightField !== 'None') url += `&weight_field=${appliedWeightField}`;
+      if (appliedVmin) url += `&vmin=${appliedVmin}`;
+      if (appliedVmax) url += `&vmax=${appliedVmax}`;
+      if (appliedColorbarLabel) url += `&colorbar_label=${encodeURIComponent(appliedColorbarLabel)}`;
+      if (colorbarOrientation) url += `&colorbar_orientation=${colorbarOrientation}`;
+      if (appliedScaleBarSize) url += `&scale_bar_size=${parseFloat(appliedScaleBarSize)}`;
+      if (appliedScaleBarUnit) url += `&scale_bar_unit=${encodeURIComponent(appliedScaleBarUnit)}`;
+      if (appliedWidthValue) url += `&width_value=${appliedWidthValue}`;
+      if (appliedWidthUnit) url += `&width_unit=${appliedWidthUnit}`;
+      if (particles) url += `&particles=${encodeURIComponent(particles)}`;
+      if (grids) url += `&grids=true`;
+      if (timestamp) url += `&timestamp=true`;
+      if (appliedTopLeftText) url += `&top_left_text=${encodeURIComponent(appliedTopLeftText)}`;
+      if (appliedTopRightText) url += `&top_right_text=${encodeURIComponent(appliedTopRightText)}`;
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Failed to export frame');
+      }
+
+      // Download the file
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `${currentDataset}_${field}_${axis}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+
+      setExportProgress('Export complete!');
+      setTimeout(() => setExportProgress(''), 2000);
+    } catch (err) {
+      console.error('Export failed:', err);
+      alert(`Export failed: ${err.message}`);
+      setExportProgress('');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportAnimation = async () => {
+    if (!field || datasets.length === 0) {
+      alert('No datasets available for animation export');
+      return;
+    }
+
+    if (!confirm(`This will export ${datasets.length} frames as PNG, GIF, and MP4. This may take several minutes. Continue?`)) {
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      setExportProgress(`Exporting ${datasets.length} frames...`);
+
+      // Prepare request body with all settings
+      const requestBody = {
+        datasets: datasets,
+        fps: exportFps,
+        axis: axis,
+        field: field,
+        kind: appliedPlotType,
+        weight_field: appliedWeightField !== 'None' ? appliedWeightField : null,
+        vmin: appliedVmin ? parseFloat(appliedVmin) : null,
+        vmax: appliedVmax ? parseFloat(appliedVmax) : null,
+        show_colorbar: showColorbar,
+        log_scale: logScale,
+        colorbar_label: appliedColorbarLabel || null,
+        colorbar_orientation: colorbarOrientation,
+        cmap: cmap,
+        dpi: appliedDpi || 300,
+        show_scale_bar: showScaleBar,
+        scale_bar_size: appliedScaleBarSize ? parseFloat(appliedScaleBarSize) : null,
+        scale_bar_unit: appliedScaleBarUnit || null,
+        width_value: appliedWidthValue ? parseFloat(appliedWidthValue) : null,
+        width_unit: appliedWidthUnit || null,
+        particles: particles || '',
+        grids: grids,
+        timestamp: timestamp,
+        top_left_text: appliedTopLeftText || null,
+        top_right_text: appliedTopRightText || null
+      };
+
+      const response = await fetch('/api/export/animation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to export animation');
+      }
+
+      setExportProgress('Creating ZIP file...');
+
+      // Download the ZIP file
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      
+      // Extract filename from Content-Disposition header if available
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `export_${field}_${axis}.zip`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename=(.+)/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+
+      setExportProgress('Export complete!');
+      setTimeout(() => setExportProgress(''), 3000);
+    } catch (err) {
+      console.error('Animation export failed:', err);
+      alert(`Animation export failed: ${err.message}`);
+      setExportProgress('');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="app-container">
       <div className="sidebar">
@@ -382,6 +530,13 @@ Full details in browser console (F12)`;
           timestamp={timestamp} setTimestamp={setTimestamp}
           topLeftText={topLeftText} setTopLeftText={setTopLeftText}
           topRightText={topRightText} setTopRightText={setTopRightText}
+          // Export props
+          onExportCurrentFrame={handleExportCurrentFrame}
+          onExportAnimation={handleExportAnimation}
+          isExporting={isExporting}
+          exportProgress={exportProgress}
+          exportFps={exportFps}
+          setExportFps={setExportFps}
         />
       </div>
       <div className="main-content">
