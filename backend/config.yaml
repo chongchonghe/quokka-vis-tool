@@ -3,5 +3,5 @@ font_size: 20
 scale_bar_height_fraction: 4
 colormap_fraction: 0.2
 default_dpi: 300
-cache_max_size: 500
+cache_max_size: 200
 show_axes: false  # Set to true to show axis labels and tick labels

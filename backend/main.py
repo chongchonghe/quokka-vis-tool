@@ -829,6 +829,7 @@ def export_current_frame(
 def export_animation(request: Request):
     """
     Export animation as PNG frames + GIF + MP4 bundled in a ZIP file.
+    PNGs are always exported even if ffmpeg is not available or fails.
     Expects JSON body with:
     - datasets: list of dataset filenames
     - fps: frames per second for GIF/MP4
@@ -836,13 +837,22 @@ def export_animation(request: Request):
     """
     global DATA_DIR
     
+    temp_dir = None
+    
     try:
         # Parse request body
         import asyncio
         body = asyncio.run(request.json())
         
+        # Validate and sanitize input parameters
         datasets = body.get("datasets", [])
+        if not datasets or not isinstance(datasets, list):
+            raise HTTPException(status_code=400, detail="No datasets provided or invalid format")
+        
         fps = body.get("fps", 5)
+        if not isinstance(fps, (int, float)) or fps <= 0:
+            print(f"Warning: Invalid fps value {fps}, defaulting to 5")
+            fps = 5
         
         # Visualization parameters
         axis = body.get("axis", "z")
@@ -857,6 +867,12 @@ def export_animation(request: Request):
         colorbar_orientation = body.get("colorbar_orientation", "right")
         cmap = body.get("cmap", "viridis")
         dpi = body.get("dpi", 300)
+        
+        # Validate dpi
+        if not isinstance(dpi, (int, float)) or dpi <= 0 or dpi > 1000:
+            print(f"Warning: Invalid dpi value {dpi}, defaulting to 300")
+            dpi = 300
+        
         show_scale_bar = body.get("show_scale_bar", False)
         scale_bar_size = body.get("scale_bar_size")
         scale_bar_unit = body.get("scale_bar_unit")
@@ -868,159 +884,296 @@ def export_animation(request: Request):
         top_left_text = body.get("top_left_text")
         top_right_text = body.get("top_right_text")
         
-        if not datasets:
-            raise HTTPException(status_code=400, detail="No datasets provided")
+        # Validate DATA_DIR
+        if not DATA_DIR or not os.path.exists(DATA_DIR):
+            raise HTTPException(status_code=400, detail=f"Data directory does not exist: {DATA_DIR}")
         
         # Load configuration
-        config = load_config()
-        SHORT_SIZE = config.get("short_size", 3.6)
-        FONT_SIZE = config.get("font_size", 20)
-        SCALE_BAR_HEIGHT_FRACTION = config.get("scale_bar_height_fraction", 15)
-        COLORMAP_FRACTION = config.get("colormap_fraction", 0.1)
-        SHOW_AXES = config.get("show_axes", False)
+        try:
+            config = load_config()
+            SHORT_SIZE = config.get("short_size", 3.6)
+            FONT_SIZE = config.get("font_size", 20)
+            SCALE_BAR_HEIGHT_FRACTION = config.get("scale_bar_height_fraction", 15)
+            COLORMAP_FRACTION = config.get("colormap_fraction", 0.1)
+            SHOW_AXES = config.get("show_axes", False)
+        except Exception as e:
+            print(f"Warning: Could not load config, using defaults: {e}")
+            SHORT_SIZE = 3.6
+            FONT_SIZE = 20
+            SCALE_BAR_HEIGHT_FRACTION = 15
+            COLORMAP_FRACTION = 0.1
+            SHOW_AXES = False
         
         # Parse particles
         particle_list = tuple(p.strip() for p in particles.split(',')) if particles else ()
         
         # Create temporary directory for all files
-        temp_dir = tempfile.mkdtemp()
+        try:
+            temp_dir = tempfile.mkdtemp()
+            print(f"Created temporary directory: {temp_dir}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to create temporary directory: {e}")
+        
+        # Track successfully generated frames
+        generated_frames = []
+        failed_frames = []
         
         try:
             # Generate PNG frames
             print(f"Generating {len(datasets)} frames...")
             for idx, dataset_name in enumerate(datasets):
-                dataset_path = os.path.join(DATA_DIR, dataset_name)
-                
-                if not os.path.exists(dataset_path):
-                    print(f"Warning: Dataset not found: {dataset_path}")
+                try:
+                    # Validate dataset name
+                    if not dataset_name or not isinstance(dataset_name, str):
+                        print(f"Warning: Invalid dataset name at index {idx}: {dataset_name}")
+                        failed_frames.append((idx, dataset_name, "Invalid dataset name"))
+                        continue
+                    
+                    dataset_path = os.path.join(DATA_DIR, dataset_name)
+                    
+                    if not os.path.exists(dataset_path):
+                        print(f"Warning: Dataset not found: {dataset_path}")
+                        failed_frames.append((idx, dataset_name, "Dataset not found"))
+                        continue
+                    
+                    # Load dataset
+                    ds_temp = yt.load(dataset_path)
+                    _add_derived_fields(ds_temp)
+                    
+                    # Get coordinate
+                    coord = ds_temp.domain_center[ds_temp.coordinates.axis_id[axis]]
+                    coord = float(coord)
+                    
+                    # Generate image
+                    image_bytes = _generate_plot_image(
+                        dataset_path,
+                        kind,
+                        axis,
+                        field,
+                        weight_field,
+                        coord,
+                        vmin,
+                        vmax,
+                        show_colorbar,
+                        log_scale,
+                        colorbar_label,
+                        colorbar_orientation,
+                        cmap,
+                        dpi,
+                        show_scale_bar,
+                        scale_bar_size,
+                        scale_bar_unit,
+                        width_value,
+                        width_unit,
+                        particle_list,
+                        grids,
+                        timestamp_anno,
+                        top_left_text,
+                        top_right_text,
+                        SHORT_SIZE,
+                        FONT_SIZE,
+                        SCALE_BAR_HEIGHT_FRACTION,
+                        COLORMAP_FRACTION,
+                        SHOW_AXES
+                    )
+                    
+                    # Save PNG frame
+                    frame_filename = f"frame_{idx:04d}_{dataset_name}_{field}_{axis}.png"
+                    frame_path = os.path.join(temp_dir, frame_filename)
+                    with open(frame_path, 'wb') as f:
+                        f.write(image_bytes)
+                    
+                    generated_frames.append(frame_filename)
+                    print(f"Generated frame {idx + 1}/{len(datasets)}: {frame_filename}")
+                    
+                except Exception as e:
+                    print(f"Error generating frame {idx} for dataset {dataset_name}: {e}")
+                    traceback.print_exc()
+                    failed_frames.append((idx, dataset_name, str(e)))
                     continue
-                
-                # Load dataset
-                ds_temp = yt.load(dataset_path)
-                _add_derived_fields(ds_temp)
-                
-                # Get coordinate
-                coord = ds_temp.domain_center[ds_temp.coordinates.axis_id[axis]]
-                coord = float(coord)
-                
-                # Generate image
-                image_bytes = _generate_plot_image(
-                    dataset_path,
-                    kind,
-                    axis,
-                    field,
-                    weight_field,
-                    coord,
-                    vmin,
-                    vmax,
-                    show_colorbar,
-                    log_scale,
-                    colorbar_label,
-                    colorbar_orientation,
-                    cmap,
-                    dpi,
-                    show_scale_bar,
-                    scale_bar_size,
-                    scale_bar_unit,
-                    width_value,
-                    width_unit,
-                    particle_list,
-                    grids,
-                    timestamp_anno,
-                    top_left_text,
-                    top_right_text,
-                    SHORT_SIZE,
-                    FONT_SIZE,
-                    SCALE_BAR_HEIGHT_FRACTION,
-                    COLORMAP_FRACTION,
-                    SHOW_AXES
+            
+            # Check if we have any frames
+            if not generated_frames:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Failed to generate any frames. Please check the server logs for details."
                 )
-                
-                # Save PNG frame
-                frame_filename = f"frame_{idx:04d}_{dataset_name}_{field}_{axis}.png"
-                frame_path = os.path.join(temp_dir, frame_filename)
-                with open(frame_path, 'wb') as f:
-                    f.write(image_bytes)
-                
-                print(f"Generated frame {idx + 1}/{len(datasets)}: {frame_filename}")
+            
+            print(f"Successfully generated {len(generated_frames)} frames")
+            if failed_frames:
+                print(f"Failed to generate {len(failed_frames)} frames:")
+                for idx, name, error in failed_frames:
+                    print(f"  Frame {idx} ({name}): {error}")
+            
+            # Try to create GIF and MP4 using ffmpeg (optional, won't fail if ffmpeg unavailable)
+            gif_path = None
+            mp4_path = None
+            ffmpeg_available = False
             
             # Check if ffmpeg is available
             try:
-                subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True)
-            except (subprocess.CalledProcessError, FileNotFoundError):
-                raise HTTPException(
-                    status_code=500, 
-                    detail="ffmpeg is not available in PATH. Please install ffmpeg to use animation export."
+                result = subprocess.run(
+                    ["ffmpeg", "-version"], 
+                    capture_output=True, 
+                    check=True,
+                    timeout=5
                 )
+                ffmpeg_available = True
+                print("ffmpeg is available")
+            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
+                print(f"ffmpeg is not available or failed: {e}")
+                print("Will export PNG frames only")
             
-            # Create GIF using ffmpeg
-            print("Creating animated GIF...")
-            gif_filename = f"animation_{field}_{axis}.gif"
-            gif_path = os.path.join(temp_dir, gif_filename)
-            palette_path = os.path.join(temp_dir, "palette.png")
+            if ffmpeg_available and len(generated_frames) > 1:
+                # Create GIF using ffmpeg
+                try:
+                    print("Creating animated GIF...")
+                    gif_filename = f"animation_{field}_{axis}.gif"
+                    gif_path = os.path.join(temp_dir, gif_filename)
+                    palette_path = os.path.join(temp_dir, "palette.png")
+                    
+                    # Generate palette for better quality GIF
+                    palette_cmd = [
+                        "ffmpeg", "-y",
+                        "-framerate", str(fps),
+                        "-pattern_type", "glob",
+                        "-i", os.path.join(temp_dir, "frame_*.png"),
+                        "-vf", "palettegen",
+                        palette_path
+                    ]
+                    result = subprocess.run(palette_cmd, capture_output=True, check=True, timeout=60)
+                    
+                    # Create GIF with palette
+                    gif_cmd = [
+                        "ffmpeg", "-y",
+                        "-framerate", str(fps),
+                        "-pattern_type", "glob",
+                        "-i", os.path.join(temp_dir, "frame_*.png"),
+                        "-i", palette_path,
+                        "-lavfi", "paletteuse",
+                        gif_path
+                    ]
+                    result = subprocess.run(gif_cmd, capture_output=True, check=True, timeout=120)
+                    
+                    if os.path.exists(gif_path) and os.path.getsize(gif_path) > 0:
+                        print(f"Created GIF: {gif_filename}")
+                    else:
+                        print("GIF creation failed: output file is empty or doesn't exist")
+                        gif_path = None
+                        
+                except subprocess.TimeoutExpired:
+                    print("GIF creation timed out")
+                    gif_path = None
+                except Exception as e:
+                    print(f"Error creating GIF: {e}")
+                    traceback.print_exc()
+                    gif_path = None
+                
+                # Create MP4 using ffmpeg
+                try:
+                    print("Creating MP4 video...")
+                    mp4_filename = f"animation_{field}_{axis}.mp4"
+                    mp4_path = os.path.join(temp_dir, mp4_filename)
+                    
+                    mp4_cmd = [
+                        "ffmpeg", "-y",
+                        "-framerate", str(fps),
+                        "-pattern_type", "glob",
+                        "-i", os.path.join(temp_dir, "frame_*.png"),
+                        "-c:v", "libx264",
+                        "-pix_fmt", "yuv420p",
+                        mp4_path
+                    ]
+                    result = subprocess.run(mp4_cmd, capture_output=True, check=True, timeout=120)
+                    
+                    if os.path.exists(mp4_path) and os.path.getsize(mp4_path) > 0:
+                        print(f"Created MP4: {mp4_filename}")
+                    else:
+                        print("MP4 creation failed: output file is empty or doesn't exist")
+                        mp4_path = None
+                        
+                except subprocess.TimeoutExpired:
+                    print("MP4 creation timed out")
+                    mp4_path = None
+                except Exception as e:
+                    print(f"Error creating MP4: {e}")
+                    traceback.print_exc()
+                    mp4_path = None
+            elif not ffmpeg_available:
+                print("Skipping GIF and MP4 creation: ffmpeg not available")
+            elif len(generated_frames) <= 1:
+                print("Skipping GIF and MP4 creation: need at least 2 frames")
             
-            # Generate palette for better quality GIF
-            palette_cmd = [
-                "ffmpeg", "-y",
-                "-framerate", str(fps),
-                "-pattern_type", "glob",
-                "-i", os.path.join(temp_dir, "frame_*.png"),
-                "-vf", "palettegen",
-                palette_path
-            ]
-            subprocess.run(palette_cmd, capture_output=True, check=True)
-            
-            # Create GIF with palette
-            gif_cmd = [
-                "ffmpeg", "-y",
-                "-framerate", str(fps),
-                "-pattern_type", "glob",
-                "-i", os.path.join(temp_dir, "frame_*.png"),
-                "-i", palette_path,
-                "-lavfi", "paletteuse",
-                gif_path
-            ]
-            subprocess.run(gif_cmd, capture_output=True, check=True)
-            print(f"Created GIF: {gif_filename}")
-            
-            # Create MP4 using ffmpeg
-            print("Creating MP4 video...")
-            mp4_filename = f"animation_{field}_{axis}.mp4"
-            mp4_path = os.path.join(temp_dir, mp4_filename)
-            
-            mp4_cmd = [
-                "ffmpeg", "-y",
-                "-framerate", str(fps),
-                "-pattern_type", "glob",
-                "-i", os.path.join(temp_dir, "frame_*.png"),
-                "-c:v", "libx264",
-                "-pix_fmt", "yuv420p",
-                mp4_path
-            ]
-            subprocess.run(mp4_cmd, capture_output=True, check=True)
-            print(f"Created MP4: {mp4_filename}")
-            
-            # Create ZIP file
+            # Create ZIP file (always includes PNGs, optionally includes GIF/MP4)
             print("Creating ZIP archive...")
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             zip_filename = f"export_{field}_{axis}_{timestamp}.zip"
             zip_path = os.path.join(temp_dir, zip_filename)
             
-            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                # Add all PNG frames
-                for filename in sorted(os.listdir(temp_dir)):
-                    if filename.startswith("frame_") and filename.endswith(".png"):
-                        zipf.write(os.path.join(temp_dir, filename), filename)
+            try:
+                with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                    # Add all PNG frames
+                    png_count = 0
+                    for filename in sorted(os.listdir(temp_dir)):
+                        if filename.startswith("frame_") and filename.endswith(".png"):
+                            file_path = os.path.join(temp_dir, filename)
+                            if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                                zipf.write(file_path, filename)
+                                png_count += 1
+                    
+                    print(f"Added {png_count} PNG frames to ZIP")
+                    
+                    # Add GIF if it was created successfully
+                    if gif_path and os.path.exists(gif_path) and os.path.getsize(gif_path) > 0:
+                        zipf.write(gif_path, os.path.basename(gif_path))
+                        print(f"Added GIF to ZIP")
+                    
+                    # Add MP4 if it was created successfully
+                    if mp4_path and os.path.exists(mp4_path) and os.path.getsize(mp4_path) > 0:
+                        zipf.write(mp4_path, os.path.basename(mp4_path))
+                        print(f"Added MP4 to ZIP")
+                    
+                    # Add a README with information about the export
+                    readme_content = f"""Animation Export Summary
+========================
+
+Export Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Field: {field}
+Axis: {axis}
+FPS: {fps}
+DPI: {dpi}
+
+Total Datasets Requested: {len(datasets)}
+Successfully Generated Frames: {len(generated_frames)}
+Failed Frames: {len(failed_frames)}
+
+PNG Frames: {png_count}
+GIF Created: {'Yes' if gif_path and os.path.exists(gif_path) else 'No'}
+MP4 Created: {'Yes' if mp4_path and os.path.exists(mp4_path) else 'No'}
+FFmpeg Available: {'Yes' if ffmpeg_available else 'No'}
+
+"""
+                    if failed_frames:
+                        readme_content += "\nFailed Frames:\n"
+                        for idx, name, error in failed_frames:
+                            readme_content += f"  Frame {idx} ({name}): {error}\n"
+                    
+                    zipf.writestr("README.txt", readme_content)
+                    
+                print(f"Created ZIP: {zip_filename}")
                 
-                # Add GIF and MP4
-                zipf.write(gif_path, gif_filename)
-                zipf.write(mp4_path, mp4_filename)
-            
-            print(f"Created ZIP: {zip_filename}")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to create ZIP file: {e}")
             
             # Read ZIP file into memory
+            if not os.path.exists(zip_path):
+                raise HTTPException(status_code=500, detail="ZIP file was not created successfully")
+            
             with open(zip_path, 'rb') as f:
                 zip_bytes = f.read()
+            
+            if not zip_bytes:
+                raise HTTPException(status_code=500, detail="ZIP file is empty")
             
             return Response(
                 content=zip_bytes,
@@ -1032,10 +1185,22 @@ def export_animation(request: Request):
             
         finally:
             # Clean up temporary directory
-            print(f"Cleaning up temporary directory: {temp_dir}")
-            shutil.rmtree(temp_dir, ignore_errors=True)
+            if temp_dir and os.path.exists(temp_dir):
+                print(f"Cleaning up temporary directory: {temp_dir}")
+                try:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                except Exception as e:
+                    print(f"Warning: Could not clean up temporary directory: {e}")
     
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        if temp_dir and os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
     except Exception as e:
+        # Clean up on error
+        if temp_dir and os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir, ignore_errors=True)
         print(f"Error exporting animation: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
