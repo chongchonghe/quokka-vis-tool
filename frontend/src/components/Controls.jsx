@@ -27,7 +27,6 @@ function Controls({
   widthUnit, setWidthUnit,
   particles, setParticles,
   grids, setGrids,
-  cellEdges, setCellEdges,
   timestamp, setTimestamp,
   topLeftText, setTopLeftText,
   topRightText, setTopRightText
@@ -156,10 +155,6 @@ function Controls({
           <label style={{ fontWeight: 'normal' }}>
             <input type="checkbox" checked={grids} onChange={(e) => setGrids(e.target.checked)} style={{ width: 'auto', marginRight: '0.5rem' }} />
             Grids
-          </label>
-          <label style={{ fontWeight: 'normal' }}>
-            <input type="checkbox" checked={cellEdges} onChange={(e) => setCellEdges(e.target.checked)} style={{ width: 'auto', marginRight: '0.5rem' }} />
-            Cell Edges
           </label>
           <label style={{ fontWeight: 'normal' }}>
             <input type="checkbox" checked={timestamp} onChange={(e) => setTimestamp(e.target.checked)} style={{ width: 'auto', marginRight: '0.5rem' }} />

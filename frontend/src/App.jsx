@@ -47,7 +47,6 @@ function App() {
   const [widthUnit, setWidthUnit] = useState('');
   const [particles, setParticles] = useState('');
   const [grids, setGrids] = useState(false);
-  const [cellEdges, setCellEdges] = useState(false);
   const [timestamp, setTimestamp] = useState(false);
   const [topLeftText, setTopLeftText] = useState('');
   const [topRightText, setTopRightText] = useState('');
@@ -59,7 +58,6 @@ function App() {
   const [appliedWidthUnit, setAppliedWidthUnit] = useState('');
   const [appliedParticles, setAppliedParticles] = useState('');
   const [appliedGrids, setAppliedGrids] = useState(false);
-  const [appliedCellEdges, setAppliedCellEdges] = useState(false);
   const [appliedTimestamp, setAppliedTimestamp] = useState(false);
   const [appliedTopLeftText, setAppliedTopLeftText] = useState('');
   const [appliedTopRightText, setAppliedTopRightText] = useState('');
@@ -266,7 +264,6 @@ function App() {
     setAppliedWidthUnit(widthUnit);
     setAppliedParticles(particles);
     setAppliedGrids(grids);
-    setAppliedCellEdges(cellEdges);
     setAppliedTimestamp(timestamp);
     setAppliedTopLeftText(topLeftText);
     setAppliedTopRightText(topRightText);
@@ -383,7 +380,6 @@ Full details in browser console (F12)`;
           widthUnit={widthUnit} setWidthUnit={setWidthUnit}
           particles={particles} setParticles={setParticles}
           grids={grids} setGrids={setGrids}
-          cellEdges={cellEdges} setCellEdges={setCellEdges}
           timestamp={timestamp} setTimestamp={setTimestamp}
           topLeftText={topLeftText} setTopLeftText={setTopLeftText}
           topRightText={topRightText} setTopRightText={setTopRightText}
@@ -413,7 +409,6 @@ Full details in browser console (F12)`;
           widthUnit={appliedWidthUnit}
           particles={appliedParticles}
           grids={appliedGrids}
-          cellEdges={appliedCellEdges}
           timestamp={appliedTimestamp}
           topLeftText={appliedTopLeftText}
           topRightText={appliedTopRightText}

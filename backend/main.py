@@ -333,7 +333,6 @@ def _generate_plot_image(
     width_unit: Optional[str],
     particles: tuple, # tuple to be hashable
     grids: bool,
-    cell_edges: bool,
     timestamp: bool,
     top_left_text: Optional[str],
     top_right_text: Optional[str],
@@ -385,38 +384,40 @@ def _generate_plot_image(
     # Annotations
     if grids:
         slc.annotate_grids(edgecolors='white', linewidth=1)
-    if cell_edges:
-        slc.annotate_cell_edges(line_width=0.001, color='black')
-    if not timestamp: # The argument is 'timestamp' (show it), but quick_plot logic was 'timeoff' (hide it). 
-        # Wait, quick_plot says: if not time_off: slc.annotate_timestamp()
-        # So if we want to show it, we call it.
-        # But yt SlicePlot shows timestamp by default? 
-        # Actually yt plots usually show timestamp by default. 
-        # Let's assume 'timestamp' param means "show timestamp".
-        # If it's False, we might need to hide it? 
-        # yt.SlicePlot doesn't have a simple "hide timestamp" method other than not calling annotate_timestamp if it wasn't there, 
-        # but it is there by default in some versions. 
-        # Let's stick to: if timestamp is True, ensure it's there. 
-        # Actually, let's look at quick_plot: "if not time_off: slc.annotate_timestamp()". 
-        # This implies it might NOT be there by default or they want to ensure it.
-        # Let's just call annotate_timestamp() if timestamp is True.
-        pass
-    else:
-        # If user wants to hide it, we might need to do something else, but for now let's just add it if requested.
-        # Actually, let's follow the requirement: "Toggle Timestamp".
-        # If True, we add it.
-        pass
     
     if timestamp:
         slc.annotate_timestamp()
 
     if particles:
-        # particles is a tuple of strings
-        for p_type in particles:
-            if p_type in ds.particle_types:
-                 slc.annotate_particles(0.1 * ds.domain_width[0], ptype=p_type, p_size=10, col='red') # Simplified for now
-            else:
-                print(f"Warning: Particle type {p_type} not found")
+        # Check if particles exist in the dataset
+        # Following quick_plot logic: check particle_info and verify particles exist
+        if 'particles' in ds.parameters.keys():
+            ad = ds.all_data()
+            Lx = ds.domain_right_edge[0] - ds.domain_left_edge[0]
+            for p_type in particles:
+                # Check if particle type exists in particle_info
+                if p_type not in ds['particle_info'].keys():
+                    print(f"Warning: Particle type {p_type} not found in particle_info")
+                    continue
+                
+                num_particles = ds['particle_info'][p_type]['num_particles']
+                if num_particles == 0:
+                    print(f"Warning: No {p_type} particles in dataset")
+                    continue
+                
+                # Verify particle position field exists
+                try:
+                    pos = ad[(p_type, "particle_position_x")]
+                    if len(pos) > 0:
+                        # Annotate particles at a depth of 0.1 * boxsize
+                        slc.annotate_particles(Lx * 0.1, p_size=10, col='red', marker='o', ptype=p_type)
+                    else:
+                        print(f"Warning: No {p_type} particles found in all_data()")
+                except yt.utilities.exceptions.YTFieldNotFound:
+                    print(f"Warning: Particle position field not found for {p_type}")
+                    continue
+        else:
+            print("Warning: No particles in ds.parameters")
 
     if top_left_text:
         slc.annotate_text((0.02, 0.98), top_left_text, coord_system='axis', text_args={
@@ -651,7 +652,6 @@ def get_slice(
     width_unit: Optional[str] = None,
     particles: Optional[str] = None, # Comma separated string
     grids: bool = False,
-    cell_edges: bool = False,
     timestamp: bool = False,
     top_left_text: Optional[str] = None,
     top_right_text: Optional[str] = None
@@ -697,7 +697,6 @@ def get_slice(
             width_unit,
             particle_list,
             grids,
-            cell_edges,
             timestamp,
             top_left_text,
             top_right_text,
