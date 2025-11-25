@@ -51,14 +51,11 @@ function App() {
   const [topLeftText, setTopLeftText] = useState('');
   const [topRightText, setTopRightText] = useState('');
 
-  // Applied states for new features
+  // Applied states for new features (only for those that need explicit refresh)
   const [appliedPlotType, setAppliedPlotType] = useState('slc');
   const [appliedWeightField, setAppliedWeightField] = useState('None');
   const [appliedWidthValue, setAppliedWidthValue] = useState('');
   const [appliedWidthUnit, setAppliedWidthUnit] = useState('');
-  const [appliedParticles, setAppliedParticles] = useState('');
-  const [appliedGrids, setAppliedGrids] = useState(false);
-  const [appliedTimestamp, setAppliedTimestamp] = useState(false);
   const [appliedTopLeftText, setAppliedTopLeftText] = useState('');
   const [appliedTopRightText, setAppliedTopRightText] = useState('');
 
@@ -262,9 +259,6 @@ function App() {
     setAppliedWeightField(weightField);
     setAppliedWidthValue(widthValue);
     setAppliedWidthUnit(widthUnit);
-    setAppliedParticles(particles);
-    setAppliedGrids(grids);
-    setAppliedTimestamp(timestamp);
     setAppliedTopLeftText(topLeftText);
     setAppliedTopRightText(topRightText);
 
@@ -407,9 +401,9 @@ Full details in browser console (F12)`;
           weightField={appliedWeightField}
           widthValue={appliedWidthValue}
           widthUnit={appliedWidthUnit}
-          particles={appliedParticles}
-          grids={appliedGrids}
-          timestamp={appliedTimestamp}
+          particles={particles}
+          grids={grids}
+          timestamp={timestamp}
           topLeftText={appliedTopLeftText}
           topRightText={appliedTopRightText}
         />

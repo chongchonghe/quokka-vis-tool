@@ -32,6 +32,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+yt.set_log_level(40) # 40 = Error
 
 def load_config():
     config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
