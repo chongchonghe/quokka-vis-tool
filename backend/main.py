@@ -384,7 +384,7 @@ def _generate_plot_image(
 
     # Annotations
     if grids:
-        slc.annotate_grids(edgecolors='white', linewidth=5)
+        slc.annotate_grids(edgecolors='white', linewidth=1)
     
     print(f"timestamp={timestamp}")
     if timestamp:
@@ -430,7 +430,62 @@ def _generate_plot_image(
                           'color': 'white', 'verticalalignment': 'top', 'horizontalalignment': 'right'})
 
     
-    # Calculate aspect ratio
+    # Configure plot appearance using yt's native methods
+    slc.set_cmap(field_tuple, cmap)
+    slc.set_log(field_tuple, log_scale)
+    
+    # Set colorbar label
+    if colorbar_label:
+        label = colorbar_label
+    else:
+        try:
+            # For projection plots without weight field, yt integrates along the axis
+            # so the units become field_unit * length_unit
+            if kind == "prj" and weight is None:
+                # Get the field info
+                field_info = ds.field_info[field_tuple]
+                # Get the base field label (without units)
+                field_name = field_info.display_name
+                # Get the field units
+                field_units = field_info.units
+                # Get the length unit from the dataset
+                length_unit = ds.length_unit
+                # Construct the integrated units
+                integrated_units = field_units * length_unit
+                # Create the label with integrated units
+                label = f"{field_name} ({integrated_units})"
+            else:
+                # For slice plots or weighted projections, use the standard label
+                label = ds.field_info[field_tuple].get_label()
+        except Exception as e:
+            print(f"Warning: Could not get field label: {e}")
+            label = field
+    
+    slc.set_colorbar_label(field_tuple, label)
+    
+    # Set vmin/vmax if provided
+    if vmin is not None and vmax is not None:
+        slc.set_zlim(field_tuple, vmin, vmax)
+    elif vmin is not None:
+        slc.set_zlim(field_tuple, vmin, 'max')
+    elif vmax is not None:
+        slc.set_zlim(field_tuple, 'min', vmax)
+    
+    # Hide or show colorbar
+    if not show_colorbar:
+        slc.hide_colorbar()
+    
+    # Add scale bar if requested
+    if show_scale_bar:
+        if scale_bar_size is not None and scale_bar_unit is not None:
+            # Use custom scale bar size
+            slc.annotate_scale(coeff=scale_bar_size, unit=scale_bar_unit, 
+                             corner='lower_left')
+        else:
+            # Use automatic scale bar (20% of width)
+            slc.annotate_scale(corner='lower_left')
+    
+    # Calculate figure size based on aspect ratio and SHORT_SIZE
     axis_id = ds.coordinates.axis_id[axis]
     x_ax_id = ds.coordinates.x_axis[axis_id]
     y_ax_id = ds.coordinates.y_axis[axis_id]
@@ -439,161 +494,37 @@ def _generate_plot_image(
     Wy = ds.domain_width[y_ax_id].v
     aspect = float(Wy / Wx)
     
-    # Calculate resolution (nx, ny) based on SHORT_SIZE and DPI
-    # SHORT_SIZE is in inches.
-    short_pixels = int(short_size * dpi)
     if aspect > 1:
         # Height > Width. Width is short side.
-        nx = short_pixels
-        ny = int(short_pixels * aspect)
         fig_width = short_size
         fig_height = short_size * aspect
     else:
         # Width > Height. Height is short side.
-        ny = short_pixels
-        nx = int(short_pixels / aspect)
         fig_height = short_size
         fig_width = short_size / aspect
-
-        
-    slc.set_buff_size((nx, ny))
     
-    frb = slc.frb
-    image_data = np.array(frb[field_tuple])
+    slc.set_figure_size(fig_width)
     
-    buf = io.BytesIO()
+    # Set font size
+    slc.set_font_size(font_size)
     
-    # Common scale bar logic
-    def add_scale_bar(ax, nx_pixels, ny_pixels):
-        # Get axis information
-        axis_id = ds.coordinates.axis_id[axis]
-        x_ax_id = ds.coordinates.x_axis[axis_id]
-        
-        # Determine current width (might have been set by set_width)
-        # slc.width is (width_x, width_y) in code units
-        current_width = slc.width[0] # width in x
-        
-        # Use custom scale bar size if provided, otherwise auto-calculate
-        if scale_bar_size is not None and scale_bar_unit is not None:
-            try:
-                custom_quantity = yt.YTQuantity(scale_bar_size, scale_bar_unit)
-                box_length_fraction = float(custom_quantity / current_width)
-                display_label = f'{scale_bar_size:.3g} {scale_bar_unit}'
-            except Exception as e:
-                print(f"Warning: Could not convert {scale_bar_size} {scale_bar_unit}: {e}")
-                box_length_fraction = 0.2
-                display_label = f'{0.2 * float(current_width.v):.3g} {current_width.units}'
-        else:
-            box_length_fraction = 0.2
-            scale_value = 0.2 * float(current_width.v)
-            magnitude = 10 ** np.floor(np.log10(scale_value))
-            nice_scale = np.round(scale_value / magnitude) * magnitude
-            box_length_fraction = nice_scale / float(current_width.v)
-            display_label = f'{nice_scale:.3g} {current_width.units}'
-        
-        scale_bar_pixels = box_length_fraction * nx_pixels
-        
-        # Calculate size_vertical (height of scale bar)
-        # We want height = SHORT_SIZE / SCALE_BAR_HEIGHT_FRACTION (inches)
-        # We know min(nx, ny) corresponds to SHORT_SIZE (inches)
-        # So size_vertical_pixels = min(nx, ny) / SCALE_BAR_HEIGHT_FRACTION
-        size_vertical_pixels = min(nx_pixels, ny_pixels) / scale_bar_height_fraction
-        
-        fontprops = fm.FontProperties(size=font_size, weight='bold')
-        scalebar = AnchoredSizeBar(
-            ax.transData,
-            scale_bar_pixels,
-            display_label,
-            'lower left',
-            pad=0.5,
-            color='white',
-            frameon=False,
-            size_vertical=size_vertical_pixels,
-            fontproperties=fontprops
-        )
-        ax.add_artist(scalebar)
-
-    if show_colorbar:
-        # Use matplotlib figure to show colorbar
-        fig = plt.figure(figsize=(fig_width, fig_height))
-        ax = fig.add_subplot(111)
-        
-        norm = matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax) if log_scale else matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
-        
-        im = ax.imshow(image_data, origin='lower', cmap=cmap, norm=norm)
-        
-        # Create divider for existing axes instance
-        divider = make_axes_locatable(ax)
-        
-        # Colorbar always on the right
-        # Width is 1/SCALE_BAR_HEIGHT_FRACTION of the short axis (SHORT_SIZE)
-        cbar_width_inches = short_size / scale_bar_height_fraction
-        cax = divider.append_axes("right", size=cbar_width_inches, pad=0.05)
-        cbar = fig.colorbar(im, cax=cax, orientation="vertical")
-        
-        # Set colorbar label
-        if colorbar_label:
-            label = colorbar_label
-        else:
-            try:
-                # For projection plots without weight field, yt integrates along the axis
-                # so the units become field_unit * length_unit
-                if kind == "prj" and weight is None:
-                    logger.debug("Projection plot without weight field")
-                    # Get the field info
-                    field_info = ds.field_info[field_tuple]
-                    # Get the base field label (without units)
-                    field_name = field_info.display_name
-                    # Get the field units
-                    field_units = field_info.units
-                    # Get the length unit from the dataset
-                    length_unit = ds.length_unit
-                    # Construct the integrated units
-                    integrated_units = field_units * length_unit
-                    # Create the label with integrated units
-                    label = f"{field_name} ({integrated_units})"
-                else:
-                    # For slice plots or weighted projections, use the standard label
-                    label = ds.field_info[field_tuple].get_label()
-            except Exception as e:
-                print(f"Warning: Could not get field label: {e}")
-                label = field
-        
-        # Set font size for colorbar (ticks at 80% of FONT_SIZE)
-        cbar.ax.tick_params(labelsize=int(font_size * 0.8))
-        cbar.set_label(label, size=font_size)
-        
-        if show_scale_bar:
-            add_scale_bar(ax, nx, ny)
-        
-        ax.axis('off')
-        plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0.1, dpi=dpi)
-        plt.close(fig)
-    else:
-        if show_scale_bar:
-            fig = plt.figure(figsize=(fig_width, fig_height))
-            ax = fig.add_subplot(111)
-            
-            norm = matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax) if log_scale else matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
-            im = ax.imshow(image_data, origin='lower', cmap=cmap, norm=norm)
-            
-            add_scale_bar(ax, nx, ny)
-            
-            ax.axis('off')
-            plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0.1, dpi=dpi)
-            plt.close(fig)
-        else:
-            # Use imsave for pure data view, but we need to apply log scale and colormap manually
-            norm = matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax) if log_scale else matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
-            mapped_data = norm(image_data)
-            cm = matplotlib.colormaps[cmap]
-            colored_data = cm(mapped_data)
-            
-            # We can use plt.imsave
-            plt.imsave(buf, colored_data, origin='lower', format='png', dpi=dpi)
-        
-    buf.seek(0)
-    return buf.getvalue()
+    # Save to temporary file then read into BytesIO
+    # yt.save() requires a file path, not a BytesIO object
+    import tempfile
+    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_file:
+        tmp_path = tmp_file.name
+    
+    try:
+        slc.save(tmp_path, mpl_kwargs={"dpi": dpi, "bbox_inches": "tight", "pad_inches": 0.1})
+        # Read the saved file into bytes
+        with open(tmp_path, 'rb') as f:
+            image_bytes = f.read()
+    finally:
+        # Clean up temp file
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+    
+    return image_bytes
 
 def _add_derived_fields(ds):
     """
