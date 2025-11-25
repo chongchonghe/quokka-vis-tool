@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 
-function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, cmap, showScaleBar, scaleBarSize, scaleBarUnit, appliedScaleBarSize, appliedScaleBarUnit, appliedDpi }) {
+function Viewer({ 
+  axis, field, coord, refreshTrigger, 
+  showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, cmap, 
+  showScaleBar, scaleBarSize, scaleBarUnit, 
+  dpi,
+  // New props
+  plotType, weightField, widthValue, widthUnit, particles, grids, cellEdges, timestamp, topLeftText, topRightText
+}) {
   const [imageUrl, setImageUrl] = useState(null);
   const [error, setError] = useState(null);
 
@@ -8,18 +15,17 @@ function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, 
     if (field) {
       fetchImage();
     }
-  }, [axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, cmap,
-  showScaleBar,
-  scaleBarSize,
-  scaleBarUnit,
-  appliedScaleBarSize,
-  appliedScaleBarUnit,
-  appliedDpi]);
+  }, [
+    axis, field, coord, refreshTrigger, 
+    showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, cmap,
+    showScaleBar, scaleBarSize, scaleBarUnit, dpi,
+    plotType, weightField, widthValue, widthUnit, particles, grids, cellEdges, timestamp, topLeftText, topRightText
+  ]);
 
   const fetchImage = async () => {
     setError(null);
     try {
-      let url = `/api/slice?axis=${axis}&field=${field}&refreshTrigger=${refreshTrigger}&show_colorbar=${showColorbar}&log_scale=${logScale}&cmap=${cmap}&dpi=${appliedDpi || 300}&show_scale_bar=${showScaleBar}`;
+      let url = `/api/slice?axis=${axis}&field=${field}&refreshTrigger=${refreshTrigger}&show_colorbar=${showColorbar}&log_scale=${logScale}&cmap=${cmap}&dpi=${dpi || 300}&show_scale_bar=${showScaleBar}`;
       if (coord !== null) {
         url += `&coord=${coord}`;
       }
@@ -36,16 +42,24 @@ function Viewer({ axis, field, coord, refreshTrigger, showColorbar, vmin, vmax, 
         url += `&colorbar_orientation=${colorbarOrientation}`;
       }
       
-      console.log('DEBUG Viewer: scaleBarSize=', scaleBarSize, 'scaleBarUnit=', scaleBarUnit);
-      
       if (scaleBarSize && scaleBarSize !== '') {
-        console.log('DEBUG Viewer: Adding scale_bar_size to URL:', parseFloat(scaleBarSize));
         url += `&scale_bar_size=${parseFloat(scaleBarSize)}`;
       }
       if (scaleBarUnit && scaleBarUnit !== '') {
-        console.log('DEBUG Viewer: Adding scale_bar_unit to URL:', scaleBarUnit);
         url += `&scale_bar_unit=${encodeURIComponent(scaleBarUnit)}`;
       }
+
+      // New params
+      if (plotType) url += `&kind=${plotType}`;
+      if (weightField && weightField !== 'None') url += `&weight_field=${weightField}`;
+      if (widthValue) url += `&width_value=${widthValue}`;
+      if (widthUnit) url += `&width_unit=${widthUnit}`;
+      if (particles) url += `&particles=${encodeURIComponent(particles)}`;
+      if (grids) url += `&grids=true`;
+      if (cellEdges) url += `&cell_edges=true`;
+      if (timestamp) url += `&timestamp=true`;
+      if (topLeftText) url += `&top_left_text=${encodeURIComponent(topLeftText)}`;
+      if (topRightText) url += `&top_right_text=${encodeURIComponent(topRightText)}`;
       
       console.log('DEBUG Viewer: Final URL:', url);
       

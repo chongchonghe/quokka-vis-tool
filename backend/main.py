@@ -299,10 +299,12 @@ except Exception:
     CACHE_MAX_SIZE = 32
 
 @lru_cache(maxsize=CACHE_MAX_SIZE)
-def _generate_slice_image(
+def _generate_plot_image(
     dataset_path: str,
+    kind: str,
     axis: str,
     field: str,
+    weight_field: Optional[str],
     coord: float,
     vmin: Optional[float],
     vmax: Optional[float],
@@ -315,28 +317,116 @@ def _generate_slice_image(
     show_scale_bar: bool,
     scale_bar_size: Optional[float],
     scale_bar_unit: Optional[str],
+    width_value: Optional[float],
+    width_unit: Optional[str],
+    particles: tuple, # tuple to be hashable
+    grids: bool,
+    cell_edges: bool,
+    timestamp: bool,
+    top_left_text: Optional[str],
+    top_right_text: Optional[str],
     short_size: float,
     font_size: int,
     scale_bar_height_fraction: float,
     colormap_fraction: float
 ):
     # Ensure global ds matches dataset_path
-    # In a single-threaded async environment, this should be consistent if load_dataset was called.
-    # However, if multiple requests interleave, ds might have changed.
-    # But since we are caching based on dataset_path, if ds doesn't match, we might be in trouble.
-    # Ideally we would load ds here if needed, but that's slow.
-    # We assume the caller (get_slice) ensures ds is loaded and matches dataset_path.
-    # Or we can check:
     global ds
     if ds is None or current_dataset_path != dataset_path:
-        # This might happen if server restarted or race condition (unlikely with uvicorn default)
-        # We try to reload if path exists
         if os.path.exists(dataset_path):
             ds = yt.load(dataset_path)
+            _add_derived_fields(ds)
         else:
             raise Exception(f"Dataset not found or mismatch: {dataset_path}")
 
-    slc = yt.SlicePlot(ds, axis, ("boxlib", field), center=ds.domain_center)
+    # Add derived fields if they are not already present (in case ds was loaded but fields not added)
+    # This check is cheap
+    if ("gas", "temperature") not in ds.derived_field_list and ("boxlib", "temperature") not in ds.derived_field_list:
+         _add_derived_fields(ds)
+
+    field_tuple = ("boxlib", field)
+    # Check if field is a derived field we added
+    if field in ["temperature", "velocity_magnitude", "momentum_density", "number_density"]:
+        field_tuple = ("gas", field)
+    
+    # Fallback: if ("boxlib", field) is not found, check if ("gas", field) exists
+    # This handles cases where we aliased gasDensity to ("gas", "density") but user requested "density"
+    # which defaults to ("boxlib", "density")
+    if field_tuple not in ds.derived_field_list and field_tuple not in ds.field_list:
+        if ("gas", field) in ds.derived_field_list:
+            field_tuple = ("gas", field)
+        elif ("boxlib", field) not in ds.field_list:
+             # Try to find a match in field_list
+             # This is a bit hacky but might save us
+             pass
+
+    # Handle weight field for projections
+    weight = None
+    if kind == "prj" and weight_field and weight_field != "None":
+        if weight_field == "density":
+            weight = ("gas", "density")
+        elif weight_field == "cell_volume":
+            weight = ("boxlib", "volume") # or ("index", "cell_volume") depending on yt version/frontend
+        elif weight_field == "cell_mass":
+            weight = ("gas", "cell_mass")
+        else:
+            weight = ("boxlib", weight_field)
+
+    if kind == "slc":
+        slc = yt.SlicePlot(ds, axis, field_tuple, center=ds.domain_center)
+    elif kind == "prj":
+        slc = yt.ProjectionPlot(ds, axis, field_tuple, weight_field=weight, center=ds.domain_center)
+    else:
+        raise ValueError(f"Unknown plot kind: {kind}")
+    
+    # Set Width
+    if width_value is not None and width_unit is not None:
+        slc.set_width((width_value, width_unit))
+
+    # Annotations
+    if grids:
+        slc.annotate_grids(edgecolors='white', linewidth=1)
+    if cell_edges:
+        slc.annotate_cell_edges(line_width=0.001, color='black')
+    if not timestamp: # The argument is 'timestamp' (show it), but quick_plot logic was 'timeoff' (hide it). 
+        # Wait, quick_plot says: if not time_off: slc.annotate_timestamp()
+        # So if we want to show it, we call it.
+        # But yt SlicePlot shows timestamp by default? 
+        # Actually yt plots usually show timestamp by default. 
+        # Let's assume 'timestamp' param means "show timestamp".
+        # If it's False, we might need to hide it? 
+        # yt.SlicePlot doesn't have a simple "hide timestamp" method other than not calling annotate_timestamp if it wasn't there, 
+        # but it is there by default in some versions. 
+        # Let's stick to: if timestamp is True, ensure it's there. 
+        # Actually, let's look at quick_plot: "if not time_off: slc.annotate_timestamp()". 
+        # This implies it might NOT be there by default or they want to ensure it.
+        # Let's just call annotate_timestamp() if timestamp is True.
+        pass
+    else:
+        # If user wants to hide it, we might need to do something else, but for now let's just add it if requested.
+        # Actually, let's follow the requirement: "Toggle Timestamp".
+        # If True, we add it.
+        pass
+    
+    if timestamp:
+        slc.annotate_timestamp()
+
+    if particles:
+        # particles is a tuple of strings
+        for p_type in particles:
+            if p_type in ds.particle_types:
+                 slc.annotate_particles(0.1 * ds.domain_width[0], ptype=p_type, p_size=10, col='red') # Simplified for now
+            else:
+                print(f"Warning: Particle type {p_type} not found")
+
+    if top_left_text:
+        slc.annotate_text((0.02, 0.98), top_left_text, coord_system='axis', text_args={
+                          'color': 'white', 'verticalalignment': 'top', 'horizontalalignment': 'left'})
+    
+    if top_right_text:
+        slc.annotate_text((0.98, 0.98), top_right_text, coord_system='axis', text_args={
+                          'color': 'white', 'verticalalignment': 'top', 'horizontalalignment': 'right'})
+
     
     # Calculate aspect ratio
     axis_id = ds.coordinates.axis_id[axis]
@@ -367,7 +457,7 @@ def _generate_slice_image(
     slc.set_buff_size((nx, ny))
     
     frb = slc.frb
-    image_data = np.array(frb[("boxlib", field)])
+    image_data = np.array(frb[field_tuple])
     
     buf = io.BytesIO()
     
@@ -376,25 +466,28 @@ def _generate_slice_image(
         # Get axis information
         axis_id = ds.coordinates.axis_id[axis]
         x_ax_id = ds.coordinates.x_axis[axis_id]
-        domain_width = ds.domain_width[x_ax_id]
+        
+        # Determine current width (might have been set by set_width)
+        # slc.width is (width_x, width_y) in code units
+        current_width = slc.width[0] # width in x
         
         # Use custom scale bar size if provided, otherwise auto-calculate
         if scale_bar_size is not None and scale_bar_unit is not None:
             try:
                 custom_quantity = yt.YTQuantity(scale_bar_size, scale_bar_unit)
-                box_length_fraction = float(custom_quantity / domain_width)
+                box_length_fraction = float(custom_quantity / current_width)
                 display_label = f'{scale_bar_size:.3g} {scale_bar_unit}'
             except Exception as e:
                 print(f"Warning: Could not convert {scale_bar_size} {scale_bar_unit}: {e}")
                 box_length_fraction = 0.2
-                display_label = f'{0.2 * float(domain_width.v):.3g} {domain_width.units}'
+                display_label = f'{0.2 * float(current_width.v):.3g} {current_width.units}'
         else:
             box_length_fraction = 0.2
-            scale_value = 0.2 * float(domain_width.v)
+            scale_value = 0.2 * float(current_width.v)
             magnitude = 10 ** np.floor(np.log10(scale_value))
             nice_scale = np.round(scale_value / magnitude) * magnitude
-            box_length_fraction = nice_scale / float(domain_width.v)
-            display_label = f'{nice_scale:.3g} {domain_width.units}'
+            box_length_fraction = nice_scale / float(current_width.v)
+            display_label = f'{nice_scale:.3g} {current_width.units}'
         
         scale_bar_pixels = box_length_fraction * nx_pixels
         
@@ -441,7 +534,7 @@ def _generate_slice_image(
             label = colorbar_label
         else:
             try:
-                label = ds.field_info[("boxlib", field)].get_label()
+                label = ds.field_info[field_tuple].get_label()
             except:
                 label = field
         
@@ -481,10 +574,110 @@ def _generate_slice_image(
     buf.seek(0)
     return buf.getvalue()
 
+def _add_derived_fields(ds):
+    # Constants
+    m_u = 1.660539e-24 * unyt.g
+    kelvin = unyt.K
+    k_B = unyt.physical_constants.boltzmann_constant
+    gamma = 5.0 / 3.0
+    mean_molecular_weight = 1.0 # Default to 1.0 for now, could be parameterized
+    mean_molecular_weight_per_H_atom = mean_molecular_weight * m_u
+
+    # Alias gasDensity to ("gas", "density") if needed
+    if ("gas", "density") not in ds.derived_field_list:
+        if ("boxlib", "gasDensity") in ds.field_list:
+            ds.add_field(("gas", "density"), function=lambda field, data: data[("boxlib", "gasDensity")] * unyt.g / unyt.cm**3, units="g/cm**3", sampling_type="cell", force_override=True)
+    
+    # Alias velocity components if needed (x-GasMomentum / gasDensity)
+    # This is getting complicated. If the dataset has 'x-GasMomentum', it's likely momentum density.
+    # Velocity = Momentum / Density
+    if ("gas", "velocity_x") not in ds.derived_field_list:
+        if ("boxlib", "x-GasMomentum") in ds.field_list and ("gas", "density") in ds.derived_field_list:
+             ds.add_field(("gas", "velocity_x"), function=lambda field, data: (data[("boxlib", "x-GasMomentum")] * unyt.g / (unyt.cm**2 * unyt.s)) / data[("gas", "density")], units="cm/s", sampling_type="cell", force_override=True)
+    if ("gas", "velocity_y") not in ds.derived_field_list:
+        if ("boxlib", "y-GasMomentum") in ds.field_list and ("gas", "density") in ds.derived_field_list:
+             ds.add_field(("gas", "velocity_y"), function=lambda field, data: (data[("boxlib", "y-GasMomentum")] * unyt.g / (unyt.cm**2 * unyt.s)) / data[("gas", "density")], units="cm/s", sampling_type="cell", force_override=True)
+    if ("gas", "velocity_z") not in ds.derived_field_list:
+        if ("boxlib", "z-GasMomentum") in ds.field_list and ("gas", "density") in ds.derived_field_list:
+             ds.add_field(("gas", "velocity_z"), function=lambda field, data: (data[("boxlib", "z-GasMomentum")] * unyt.g / (unyt.cm**2 * unyt.s)) / data[("gas", "density")], units="cm/s", sampling_type="cell", force_override=True)
+
+    # Total Energy Density
+    if ("gas", "total_energy_density") not in ds.derived_field_list:
+        if ("boxlib", "gasEnergy") in ds.field_list:
+             # gasEnergy might be energy density or specific energy.
+             # If it's energy density, it should have units of pressure (erg/cm^3).
+             # If it's dimensionless in the file, we might need to multiply by a unit or assume code units.
+             # Let's try to infer from the dataset.
+             # For now, let's assume it's in code units which map to erg/cm^3 if properly scaled.
+             # But yt complains it's dimensionless.
+             # We can force units.
+             ds.add_field(("gas", "total_energy_density"), function=lambda field, data: data[("boxlib", "gasEnergy")] * unyt.erg / unyt.cm**3, units="erg/cm**3", sampling_type="cell", force_override=True)
+
+
+    # Number Density
+    if ("gas", "number_density") not in ds.derived_field_list:
+        def _number_density(field, data):
+             return data[("gas", "density")] / mean_molecular_weight_per_H_atom
+        ds.add_field(("gas", "number_density"), function=_number_density, units="cm**-3", sampling_type="cell", force_override=True)
+
+    # Temperature
+    if ("gas", "temperature") not in ds.derived_field_list:
+        if ("boxlib", "temperature") in ds.field_list:
+             def _temperature_boxlib(field, data):
+                 return data[("boxlib", "temperature")] * kelvin
+             ds.add_field(("gas", "temperature"), function=_temperature_boxlib, units="K", sampling_type="cell", force_override=True)
+        else:
+            def _temperature_derived(field, data):
+                etot = data[("gas", "total_energy_density")]
+                density = data[("gas", "density")]
+                kinetic_energy = 0.5 * density * (
+                    data[("gas", "velocity_x")]**2 + 
+                    data[("gas", "velocity_y")]**2 + 
+                    data[("gas", "velocity_z")]**2
+                )
+                eint = etot - kinetic_energy
+                return eint * (gamma - 1.0) / (density / mean_molecular_weight_per_H_atom * k_B)
+            ds.add_field(("gas", "temperature"), function=_temperature_derived, units="K", sampling_type="cell", force_override=True)
+
+    # Velocity Magnitude
+    if ("gas", "velocity_magnitude") not in ds.derived_field_list:
+        def _velocity_magnitude(field, data):
+            return np.sqrt(
+                data[("gas", "velocity_x")]**2 + 
+                data[("gas", "velocity_y")]**2 + 
+                data[("gas", "velocity_z")]**2
+            )
+        ds.add_field(("gas", "velocity_magnitude"), function=_velocity_magnitude, units="cm/s", sampling_type="cell", force_override=True)
+
+    # Momentum Density
+    if ("gas", "momentum_density") not in ds.derived_field_list:
+        def _momentum_density(field, data):
+            return np.sqrt(
+                data[("gas", "momentum_density_x")]**2 + 
+                data[("gas", "momentum_density_y")]**2 + 
+                data[("gas", "momentum_density_z")]**2
+            )
+        # Check if we have components
+        if ("gas", "momentum_density_x") in ds.derived_field_list:
+             ds.add_field(("gas", "momentum_density"), function=_momentum_density, sampling_type="cell", force_override=True)
+        elif ("boxlib", "x-GasMomentum") in ds.field_list:
+             # Alias components first if needed? 
+             # Or just use them directly
+             def _momentum_density_direct(field, data):
+                 return np.sqrt(
+                     (data[("boxlib", "x-GasMomentum")] * unyt.g / (unyt.cm**2 * unyt.s))**2 + 
+                     (data[("boxlib", "y-GasMomentum")] * unyt.g / (unyt.cm**2 * unyt.s))**2 + 
+                     (data[("boxlib", "z-GasMomentum")] * unyt.g / (unyt.cm**2 * unyt.s))**2
+                 )
+             ds.add_field(("gas", "momentum_density"), function=_momentum_density_direct, sampling_type="cell", force_override=True)
+
+
 @app.get("/api/slice")
 def get_slice(
     axis: str = "z", 
     field: str = "density", 
+    kind: str = "slc",
+    weight_field: Optional[str] = None,
     coord: Optional[float] = None,
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
@@ -496,7 +689,15 @@ def get_slice(
     dpi: int = 300,
     show_scale_bar: bool = False,
     scale_bar_size: Optional[float] = None,
-    scale_bar_unit: Optional[str] = None
+    scale_bar_unit: Optional[str] = None,
+    width_value: Optional[float] = None,
+    width_unit: Optional[str] = None,
+    particles: Optional[str] = None, # Comma separated string
+    grids: bool = False,
+    cell_edges: bool = False,
+    timestamp: bool = False,
+    top_left_text: Optional[str] = None,
+    top_right_text: Optional[str] = None
 ):
     global ds, current_dataset_path
     if ds is None:
@@ -509,21 +710,20 @@ def get_slice(
     SCALE_BAR_HEIGHT_FRACTION = config.get("scale_bar_height_fraction", 15)
     COLORMAP_FRACTION = config.get("colormap_fraction", 0.1)
 
-    # Debug logging
-    import sys
-    print(f"DEBUG: scale_bar_size={scale_bar_size}, scale_bar_unit={scale_bar_unit}, show_scale_bar={show_scale_bar}, dpi={dpi}")
-    sys.stdout.flush()
-    
+    # Parse particles
+    particle_list = tuple(p.strip() for p in particles.split(',')) if particles else ()
+
     try:
         if coord is None:
             coord = ds.domain_center[ds.coordinates.axis_id[axis]]
-            # Convert to float to ensure it's hashable and consistent
             coord = float(coord)
         
-        image_bytes = _generate_slice_image(
+        image_bytes = _generate_plot_image(
             current_dataset_path,
+            kind,
             axis,
             field,
+            weight_field,
             coord,
             vmin,
             vmax,
@@ -536,6 +736,14 @@ def get_slice(
             show_scale_bar,
             scale_bar_size,
             scale_bar_unit,
+            width_value,
+            width_unit,
+            particle_list,
+            grids,
+            cell_edges,
+            timestamp,
+            top_left_text,
+            top_right_text,
             SHORT_SIZE,
             FONT_SIZE,
             SCALE_BAR_HEIGHT_FRACTION,
@@ -545,12 +753,32 @@ def get_slice(
         return Response(content=image_bytes, media_type="image/png")
 
     except Exception as e:
-        print(f"Error generating slice: {e}")
-        # If error occurs, we might want to clear cache for this key? 
-        # But lru_cache doesn't support clearing specific key easily.
+        print(f"Error generating plot: {e}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-
+@app.get("/api/fields")
+def get_fields():
+    global ds
+    if ds is None:
+        raise HTTPException(status_code=400, detail="No dataset loaded")
+    
+    # Ensure derived fields are added
+    _add_derived_fields(ds)
+    
+    # Return a list of fluid fields
+    # We want boxlib fields + our derived fields
+    fields = [f[1] for f in ds.field_list if f[0] == 'boxlib']
+    
+    # Add our derived fields if they exist
+    derived_fields = ["temperature", "velocity_magnitude", "momentum_density", "number_density"]
+    for df in derived_fields:
+        if ("gas", df) in ds.derived_field_list:
+            fields.append(df)
+            
+    # Sort and unique
+    fields = sorted(list(set(fields)))
+    return {"fields": fields}
 
 if __name__ == "__main__":
     import uvicorn

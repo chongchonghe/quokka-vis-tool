@@ -40,6 +40,31 @@ function App() {
   const [appliedScaleBarUnit, setAppliedScaleBarUnit] = useState('');
   const [appliedDpi, setAppliedDpi] = useState(300);
 
+  // New features state
+  const [plotType, setPlotType] = useState('slc');
+  const [weightField, setWeightField] = useState('None');
+  const [widthValue, setWidthValue] = useState('');
+  const [widthUnit, setWidthUnit] = useState('');
+  const [particles, setParticles] = useState('');
+  const [grids, setGrids] = useState(false);
+  const [cellEdges, setCellEdges] = useState(false);
+  const [timestamp, setTimestamp] = useState(false);
+  const [topLeftText, setTopLeftText] = useState('');
+  const [topRightText, setTopRightText] = useState('');
+
+  // Applied states for new features
+  const [appliedPlotType, setAppliedPlotType] = useState('slc');
+  const [appliedWeightField, setAppliedWeightField] = useState('None');
+  const [appliedWidthValue, setAppliedWidthValue] = useState('');
+  const [appliedWidthUnit, setAppliedWidthUnit] = useState('');
+  const [appliedParticles, setAppliedParticles] = useState('');
+  const [appliedGrids, setAppliedGrids] = useState(false);
+  const [appliedCellEdges, setAppliedCellEdges] = useState(false);
+  const [appliedTimestamp, setAppliedTimestamp] = useState(false);
+  const [appliedTopLeftText, setAppliedTopLeftText] = useState('');
+  const [appliedTopRightText, setAppliedTopRightText] = useState('');
+
+
   useEffect(() => {
     // Load initial data
     fetchServerInfo();
@@ -233,6 +258,19 @@ function App() {
     setAppliedScaleBarSize(scaleBarSize);
     setAppliedScaleBarUnit(scaleBarUnit);
     setAppliedDpi(dpi);
+    
+    // Apply new features
+    setAppliedPlotType(plotType);
+    setAppliedWeightField(weightField);
+    setAppliedWidthValue(widthValue);
+    setAppliedWidthUnit(widthUnit);
+    setAppliedParticles(particles);
+    setAppliedGrids(grids);
+    setAppliedCellEdges(cellEdges);
+    setAppliedTimestamp(timestamp);
+    setAppliedTopLeftText(topLeftText);
+    setAppliedTopRightText(topRightText);
+
     setRefreshTrigger(prev => prev + 1);
   };
 
@@ -338,6 +376,17 @@ Full details in browser console (F12)`;
           setScaleBarSize={setScaleBarSize}
           scaleBarUnit={scaleBarUnit}
           setScaleBarUnit={setScaleBarUnit}
+          // New props
+          plotType={plotType} setPlotType={setPlotType}
+          weightField={weightField} setWeightField={setWeightField}
+          widthValue={widthValue} setWidthValue={setWidthValue}
+          widthUnit={widthUnit} setWidthUnit={setWidthUnit}
+          particles={particles} setParticles={setParticles}
+          grids={grids} setGrids={setGrids}
+          cellEdges={cellEdges} setCellEdges={setCellEdges}
+          timestamp={timestamp} setTimestamp={setTimestamp}
+          topLeftText={topLeftText} setTopLeftText={setTopLeftText}
+          topRightText={topRightText} setTopRightText={setTopRightText}
         />
       </div>
       <div className="main-content">
@@ -357,6 +406,17 @@ Full details in browser console (F12)`;
           scaleBarSize={appliedScaleBarSize}
           scaleBarUnit={appliedScaleBarUnit}
           dpi={appliedDpi}
+          // New props
+          plotType={appliedPlotType}
+          weightField={appliedWeightField}
+          widthValue={appliedWidthValue}
+          widthUnit={appliedWidthUnit}
+          particles={appliedParticles}
+          grids={appliedGrids}
+          cellEdges={appliedCellEdges}
+          timestamp={appliedTimestamp}
+          topLeftText={appliedTopLeftText}
+          topRightText={appliedTopRightText}
         />
       </div>
     </div>

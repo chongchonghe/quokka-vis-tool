@@ -19,7 +19,18 @@ function Controls({
   dpi, setDpi, 
   showScaleBar, setShowScaleBar,
   scaleBarSize, setScaleBarSize,
-  scaleBarUnit, setScaleBarUnit
+  scaleBarUnit, setScaleBarUnit,
+  // New props
+  plotType, setPlotType,
+  weightField, setWeightField,
+  widthValue, setWidthValue,
+  widthUnit, setWidthUnit,
+  particles, setParticles,
+  grids, setGrids,
+  cellEdges, setCellEdges,
+  timestamp, setTimestamp,
+  topLeftText, setTopLeftText,
+  topRightText, setTopRightText
 }) {
   return (
     <div className="controls-container">
@@ -52,6 +63,26 @@ function Controls({
           </div>
         </div>
       </div>
+
+      <div className="control-group compact">
+        <label>Plot Type:</label>
+        <select value={plotType} onChange={(e) => setPlotType(e.target.value)}>
+          <option value="slc">Slice</option>
+          <option value="prj">Projection</option>
+        </select>
+      </div>
+
+      {plotType === 'prj' && (
+        <div className="control-group compact">
+          <label>Weight Field:</label>
+          <select value={weightField} onChange={(e) => setWeightField(e.target.value)}>
+            <option value="None">None</option>
+            <option value="density">Density</option>
+            <option value="cell_volume">Cell Volume</option>
+            <option value="cell_mass">Cell Mass</option>
+          </select>
+        </div>
+      )}
 
       <div className="control-group compact">
         <label>Axis:</label>
@@ -99,6 +130,49 @@ function Controls({
             <label style={{ fontWeight: 'normal', fontSize: '0.9rem' }}>Max:</label>
             <input type="number" value={vmax} onChange={(e) => setVmax(e.target.value)} placeholder="Auto" />
           </div>
+        </div>
+      </div>
+
+      <div className="control-group">
+        <label>Width:</label>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ flex: 1 }}>
+             <input type="number" value={widthValue} onChange={(e) => setWidthValue(e.target.value)} placeholder="Full" />
+          </div>
+          <div style={{ flex: 1 }}>
+             <input type="text" value={widthUnit} onChange={(e) => setWidthUnit(e.target.value)} placeholder="Unit (e.g. kpc)" />
+          </div>
+        </div>
+      </div>
+
+      <div className="control-group">
+        <label>Particles (comma-sep):</label>
+        <input type="text" value={particles} onChange={(e) => setParticles(e.target.value)} placeholder="e.g. CIC_particles" />
+      </div>
+
+      <div className="control-group">
+        <label>Annotations:</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          <label style={{ fontWeight: 'normal' }}>
+            <input type="checkbox" checked={grids} onChange={(e) => setGrids(e.target.checked)} style={{ width: 'auto', marginRight: '0.5rem' }} />
+            Grids
+          </label>
+          <label style={{ fontWeight: 'normal' }}>
+            <input type="checkbox" checked={cellEdges} onChange={(e) => setCellEdges(e.target.checked)} style={{ width: 'auto', marginRight: '0.5rem' }} />
+            Cell Edges
+          </label>
+          <label style={{ fontWeight: 'normal' }}>
+            <input type="checkbox" checked={timestamp} onChange={(e) => setTimestamp(e.target.checked)} style={{ width: 'auto', marginRight: '0.5rem' }} />
+            Timestamp
+          </label>
+        </div>
+      </div>
+
+      <div className="control-group">
+        <label>Text Annotations:</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <input type="text" value={topLeftText} onChange={(e) => setTopLeftText(e.target.value)} placeholder="Top Left Text" />
+          <input type="text" value={topRightText} onChange={(e) => setTopRightText(e.target.value)} placeholder="Top Right Text" />
         </div>
       </div>
 
