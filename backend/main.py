@@ -340,7 +340,8 @@ def _generate_plot_image(
     short_size: float,
     font_size: int,
     scale_bar_height_fraction: float,
-    colormap_fraction: float
+    colormap_fraction: float,
+    show_axes: bool
 ):
     # Ensure global ds matches dataset_path
     global ds
@@ -371,6 +372,7 @@ def _generate_plot_image(
         else:
             weight = ("gas", weight_field)
 
+    # Create plot object
     if kind == "slc":
         slc = yt.SlicePlot(ds, axis, field_tuple, center=ds.domain_center)
     elif kind == "prj":
@@ -378,18 +380,58 @@ def _generate_plot_image(
     else:
         raise ValueError(f"Unknown plot kind: {kind}")
     
-    # Set Width
+    # ========================================
+    # Configure plot properties
+    # ========================================
+    slc.set_cmap(field_tuple, cmap)
+    slc.set_log(field_tuple, log_scale)
+    slc.set_background_color(field_tuple, 'black')
+    
+    # Set width if provided
     if width_value is not None and width_unit is not None:
         slc.set_width((width_value, width_unit))
-
-    # Annotations
-    if grids:
-        slc.annotate_grids(edgecolors='white', linewidth=1)
     
-    print(f"timestamp={timestamp}")
-    if timestamp:
-        slc.annotate_timestamp()
-
+    # Set colorbar label (do this before setting zlim)
+    if show_colorbar:
+        if colorbar_label:
+            label = colorbar_label
+        else:
+            try:
+                # For projection plots without weight field, yt integrates along the axis
+                # so the units become field_unit * length_unit
+                if kind == "prj" and weight is None:
+                    # Get the field info
+                    field_info = ds.field_info[field_tuple]
+                    # Get the base field label (without units)
+                    field_name = field_info.display_name
+                    # Get the field units
+                    field_units = field_info.units
+                    # Get the length unit from the dataset
+                    length_unit = ds.length_unit
+                    # Construct the integrated units
+                    integrated_units = field_units * length_unit
+                    # Create the label with integrated units
+                    label = f"{field_name} ({integrated_units})"
+                else:
+                    # For slice plots or weighted projections, use the standard label
+                    label = ds.field_info[field_tuple].get_label()
+            except Exception as e:
+                print(f"Warning: Could not get field label: {e}")
+                label = field
+        
+        slc.set_colorbar_label(field_tuple, label)
+    
+    # Set vmin/vmax if provided
+    if vmin is not None and vmax is not None:
+        slc.set_zlim(field_tuple, vmin, vmax)
+    elif vmin is not None:
+        slc.set_zlim(field_tuple, vmin, 'max')
+    elif vmax is not None:
+        slc.set_zlim(field_tuple, 'min', vmax)
+    
+    # ========================================
+    # Add annotations
+    # ========================================
     if particles:
         # Check if particles exist in the dataset
         # Following quick_plot logic: check particle_info and verify particles exist
@@ -420,7 +462,20 @@ def _generate_plot_image(
                     continue
         else:
             print("Warning: No particles in ds.parameters")
-
+    
+    if grids:
+        slc.annotate_grids(edgecolors='white', linewidth=1)
+    
+    if timestamp:
+        slc.annotate_timestamp()
+    
+    if scale_bar_size is not None and scale_bar_unit is not None:
+        # Use custom scale bar size
+        slc.annotate_scale(coeff=scale_bar_size, unit=scale_bar_unit, corner='lower_left')
+    elif show_scale_bar:
+        # Use automatic scale bar (20% of width)
+        slc.annotate_scale(corner='lower_right')
+    
     if top_left_text:
         slc.annotate_text((0.02, 0.98), top_left_text, coord_system='axis', text_args={
                           'color': 'white', 'verticalalignment': 'top', 'horizontalalignment': 'left'})
@@ -428,63 +483,10 @@ def _generate_plot_image(
     if top_right_text:
         slc.annotate_text((0.98, 0.98), top_right_text, coord_system='axis', text_args={
                           'color': 'white', 'verticalalignment': 'top', 'horizontalalignment': 'right'})
-
     
-    # Configure plot appearance using yt's native methods
-    slc.set_cmap(field_tuple, cmap)
-    slc.set_log(field_tuple, log_scale)
-    
-    # Set colorbar label
-    if colorbar_label:
-        label = colorbar_label
-    else:
-        try:
-            # For projection plots without weight field, yt integrates along the axis
-            # so the units become field_unit * length_unit
-            if kind == "prj" and weight is None:
-                # Get the field info
-                field_info = ds.field_info[field_tuple]
-                # Get the base field label (without units)
-                field_name = field_info.display_name
-                # Get the field units
-                field_units = field_info.units
-                # Get the length unit from the dataset
-                length_unit = ds.length_unit
-                # Construct the integrated units
-                integrated_units = field_units * length_unit
-                # Create the label with integrated units
-                label = f"{field_name} ({integrated_units})"
-            else:
-                # For slice plots or weighted projections, use the standard label
-                label = ds.field_info[field_tuple].get_label()
-        except Exception as e:
-            print(f"Warning: Could not get field label: {e}")
-            label = field
-    
-    slc.set_colorbar_label(field_tuple, label)
-    
-    # Set vmin/vmax if provided
-    if vmin is not None and vmax is not None:
-        slc.set_zlim(field_tuple, vmin, vmax)
-    elif vmin is not None:
-        slc.set_zlim(field_tuple, vmin, 'max')
-    elif vmax is not None:
-        slc.set_zlim(field_tuple, 'min', vmax)
-    
-    # Hide or show colorbar
-    if not show_colorbar:
-        slc.hide_colorbar()
-    
-    # Add scale bar if requested
-    if show_scale_bar:
-        if scale_bar_size is not None and scale_bar_unit is not None:
-            # Use custom scale bar size
-            slc.annotate_scale(coeff=scale_bar_size, unit=scale_bar_unit, 
-                             corner='lower_left')
-        else:
-            # Use automatic scale bar (20% of width)
-            slc.annotate_scale(corner='lower_left')
-    
+    # ========================================
+    # Configure figure properties
+    # ========================================
     # Calculate figure size based on aspect ratio and SHORT_SIZE
     axis_id = ds.coordinates.axis_id[axis]
     x_ax_id = ds.coordinates.x_axis[axis_id]
@@ -504,9 +506,17 @@ def _generate_plot_image(
         fig_width = short_size / aspect
     
     slc.set_figure_size(fig_width)
-    
-    # Set font size
     slc.set_font_size(font_size)
+    
+    # ========================================
+    # Handle visibility controls
+    # ========================================
+    if not show_axes:
+        slc.hide_axes(draw_frame=True)
+    
+    if not show_colorbar:
+        slc.set_colorbar_label(field_tuple, "")
+        slc.hide_colorbar()
     
     # Save to temporary file then read into BytesIO
     # yt.save() requires a file path, not a BytesIO object
@@ -615,9 +625,10 @@ def get_slice(
     # Load configuration
     config = load_config()
     SHORT_SIZE = config.get("short_size", 3.6)
-    FONT_SIZE = config.get("font_size", 10)
+    FONT_SIZE = config.get("font_size", 20)
     SCALE_BAR_HEIGHT_FRACTION = config.get("scale_bar_height_fraction", 15)
     COLORMAP_FRACTION = config.get("colormap_fraction", 0.1)
+    SHOW_AXES = config.get("show_axes", False)
 
     # Parse particles
     particle_list = tuple(p.strip() for p in particles.split(',')) if particles else ()
@@ -655,7 +666,8 @@ def get_slice(
             SHORT_SIZE,
             FONT_SIZE,
             SCALE_BAR_HEIGHT_FRACTION,
-            COLORMAP_FRACTION
+            COLORMAP_FRACTION,
+            SHOW_AXES
         )
         
         return Response(content=image_bytes, media_type="image/png")
