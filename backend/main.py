@@ -534,8 +534,27 @@ def _generate_plot_image(
             label = colorbar_label
         else:
             try:
-                label = ds.field_info[field_tuple].get_label()
-            except:
+                # For projection plots without weight field, yt integrates along the axis
+                # so the units become field_unit * length_unit
+                if kind == "prj" and weight is None:
+                    logger.debug("Projection plot without weight field")
+                    # Get the field info
+                    field_info = ds.field_info[field_tuple]
+                    # Get the base field label (without units)
+                    field_name = field_info.display_name
+                    # Get the field units
+                    field_units = field_info.units
+                    # Get the length unit from the dataset
+                    length_unit = ds.length_unit
+                    # Construct the integrated units
+                    integrated_units = field_units * length_unit
+                    # Create the label with integrated units
+                    label = f"{field_name} ({integrated_units})"
+                else:
+                    # For slice plots or weighted projections, use the standard label
+                    label = ds.field_info[field_tuple].get_label()
+            except Exception as e:
+                print(f"Warning: Could not get field label: {e}")
                 label = field
         
         # Set font size for colorbar (ticks at 80% of FONT_SIZE)
