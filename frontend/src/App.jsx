@@ -231,10 +231,15 @@ function App() {
       const fieldsData = await fieldsRes.json();
       setFieldsList(fieldsData.fields);
       
-      // Keep current field if available, else default to first
+      // Keep current field if available, else default to 'density' if it exists, otherwise first field
       if (fieldsData.fields.length > 0) {
         if (!field || !fieldsData.fields.includes(field)) {
-          setField(fieldsData.fields[0]);
+          // Try to set 'density' as default if it exists
+          if (fieldsData.fields.includes('density')) {
+            setField('density');
+          } else {
+            setField(fieldsData.fields[0]);
+          }
         }
       }
       
