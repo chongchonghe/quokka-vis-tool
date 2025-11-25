@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 function Controls({ 
   axis, setAxis, 
@@ -26,6 +26,7 @@ function Controls({
   widthValue, setWidthValue,
   widthUnit, setWidthUnit,
   particles, setParticles,
+  particleTypes,
   grids, setGrids,
   timestamp, setTimestamp,
   topLeftText, setTopLeftText,
@@ -38,6 +39,15 @@ function Controls({
   exportFps,
   setExportFps
 }) {
+  const [particlesExpanded, setParticlesExpanded] = useState(false);
+
+  const handleParticleToggle = (particleType) => {
+    if (particles.includes(particleType)) {
+      setParticles(particles.filter(p => p !== particleType));
+    } else {
+      setParticles([...particles, particleType]);
+    }
+  };
   return (
     <div className="controls-container">
       <div className="control-group compact">
@@ -152,8 +162,57 @@ function Controls({
       </div>
 
       <div className="control-group">
-        <label>Particles (comma-sep):</label>
-        <input type="text" value={particles} onChange={(e) => setParticles(e.target.value)} placeholder="e.g. CIC_particles" />
+        <label 
+          onClick={() => setParticlesExpanded(!particlesExpanded)}
+          style={{ 
+            cursor: 'pointer', 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            userSelect: 'none'
+          }}
+        >
+          <span>Particles {particles.length > 0 && `(${particles.length})`}</span>
+          <span style={{ fontSize: '0.8rem' }}>{particlesExpanded ? '▼' : '▶'}</span>
+        </label>
+        {particlesExpanded && (
+          <div style={{ 
+            marginTop: '0.5rem',
+            paddingLeft: '0.5rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.25rem',
+            maxHeight: '200px',
+            overflowY: 'auto'
+          }}>
+            {particleTypes.length > 0 ? (
+              particleTypes.map(particleType => (
+                <label 
+                  key={particleType}
+                  style={{ 
+                    fontWeight: 'normal',
+                    fontSize: '0.9rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <input 
+                    type="checkbox" 
+                    checked={particles.includes(particleType)}
+                    onChange={() => handleParticleToggle(particleType)}
+                    style={{ width: 'auto', marginRight: '0.5rem' }}
+                  />
+                  {particleType}
+                </label>
+              ))
+            ) : (
+              <div style={{ fontSize: '0.85rem', color: '#888', fontStyle: 'italic' }}>
+                No particle types available
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="control-group">

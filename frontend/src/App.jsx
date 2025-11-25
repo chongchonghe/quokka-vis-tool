@@ -45,7 +45,8 @@ function App() {
   const [weightField, setWeightField] = useState('None');
   const [widthValue, setWidthValue] = useState('');
   const [widthUnit, setWidthUnit] = useState('');
-  const [particles, setParticles] = useState('');
+  const [particles, setParticles] = useState([]);  // Changed to array
+  const [particleTypes, setParticleTypes] = useState([]);  // Available particle types
   const [grids, setGrids] = useState(false);
   const [timestamp, setTimestamp] = useState(false);
   const [topLeftText, setTopLeftText] = useState('');
@@ -69,6 +70,7 @@ function App() {
     // Load initial data
     fetchServerInfo();
     fetchDatasets();
+    fetchParticleTypes();
   }, []);
 
   const fetchServerInfo = async () => {
@@ -81,6 +83,18 @@ function App() {
       setServerInfo(data);
     } catch (err) {
       console.error("Failed to fetch server info:", err);
+    }
+  };
+
+  const fetchParticleTypes = async () => {
+    try {
+      const res = await fetch('/api/particle_types');
+      const data = await res.json();
+      setParticleTypes(data.particle_types);
+    } catch (err) {
+      console.error("Failed to fetch particle types:", err);
+      // Set default particle types if fetch fails
+      setParticleTypes(["Rad", "CIC", "CICRad", "StochasticStellarPop", "Sink"]);
     }
   };
 
@@ -297,7 +311,7 @@ function App() {
       if (appliedScaleBarUnit) url += `&scale_bar_unit=${encodeURIComponent(appliedScaleBarUnit)}`;
       if (appliedWidthValue) url += `&width_value=${appliedWidthValue}`;
       if (appliedWidthUnit) url += `&width_unit=${appliedWidthUnit}`;
-      if (particles) url += `&particles=${encodeURIComponent(particles)}`;
+      if (particles.length > 0) url += `&particles=${encodeURIComponent(particles.join(','))}`;
       if (grids) url += `&grids=true`;
       if (timestamp) url += `&timestamp=true`;
       if (appliedTopLeftText) url += `&top_left_text=${encodeURIComponent(appliedTopLeftText)}`;
@@ -365,7 +379,7 @@ function App() {
         scale_bar_unit: appliedScaleBarUnit || null,
         width_value: appliedWidthValue ? parseFloat(appliedWidthValue) : null,
         width_unit: appliedWidthUnit || null,
-        particles: particles || '',
+        particles: particles.length > 0 ? particles.join(',') : '',
         grids: grids,
         timestamp: timestamp,
         top_left_text: appliedTopLeftText || null,
@@ -526,6 +540,7 @@ Full details in browser console (F12)`;
           widthValue={widthValue} setWidthValue={setWidthValue}
           widthUnit={widthUnit} setWidthUnit={setWidthUnit}
           particles={particles} setParticles={setParticles}
+          particleTypes={particleTypes}
           grids={grids} setGrids={setGrids}
           timestamp={timestamp} setTimestamp={setTimestamp}
           topLeftText={topLeftText} setTopLeftText={setTopLeftText}
@@ -561,7 +576,7 @@ Full details in browser console (F12)`;
           weightField={appliedWeightField}
           widthValue={appliedWidthValue}
           widthUnit={appliedWidthUnit}
-          particles={particles}
+          particles={particles.length > 0 ? particles.join(',') : ''}
           grids={grids}
           timestamp={timestamp}
           topLeftText={appliedTopLeftText}

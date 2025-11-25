@@ -729,6 +729,23 @@ def get_fields():
     fields = sorted(list(set(fields)))
     return {"fields": fields}
 
+@app.get("/api/particle_types")
+def get_particle_types():
+    """
+    Get the list of available particle types from config.yaml.
+    Each type is returned with '_particles' appended (e.g., 'Rad' -> 'Rad_particles')
+    """
+    try:
+        config = load_config()
+        particle_types = config.get("particle_types", [])
+        # Append '_particles' to each type
+        particle_types_with_suffix = [f"{ptype}_particles" for ptype in particle_types]
+        return {"particle_types": particle_types_with_suffix}
+    except Exception as e:
+        print(f"Error loading particle types: {e}")
+        # Return default list if config can't be loaded (with '_particles' suffix)
+        return {"particle_types": ["Rad_particles", "CIC_particles", "CICRad_particles", "StochasticStellarPop_particles", "Sink_particles"]}
+
 @app.get("/api/export/current_frame")
 def export_current_frame(
     axis: str = "z", 
