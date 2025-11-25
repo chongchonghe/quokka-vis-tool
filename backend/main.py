@@ -388,8 +388,10 @@ def _generate_plot_image(
     slc.set_background_color(field_tuple, 'black')
     
     # Set width if provided
+    is_squared = False
     if width_value is not None and width_unit is not None:
         slc.set_width((width_value, width_unit))
+        is_squared = True
     
     # Set colorbar label (do this before setting zlim)
     if show_colorbar:
@@ -505,20 +507,27 @@ def _generate_plot_image(
                           'color': 'white', 'verticalalignment': 'top', 'horizontalalignment': 'right'})
     
     is_close_to_square = aspect < 4.1 / 3 and aspect > 3.0 / 4.1
-    if aspect > 1:
-        # Height > Width. Width is short side.
-        fig_width = short_size
-        fig_height = short_size * aspect
-        # set_figure_size sets the long dimension
-        fig_size = fig_height * 1.5 if is_close_to_square else fig_height
-        slc.set_figure_size(fig_size)
+    is_make_bigger = is_close_to_square # always make it bigger for close-to-square plots
+    if not is_squared:
+        if aspect > 1:
+            # Height > Width. Width is short side.
+            fig_width = short_size
+            fig_height = short_size * aspect
+            # set_figure_size sets the long dimension
+            fig_size = fig_height * 1.5 if is_make_bigger else fig_height
+            slc.set_figure_size(fig_size)
+        else:
+            # Width >= Height. Height is short side.
+            fig_height = short_size
+            fig_width = short_size / aspect
+            # set_figure_size sets the long dimension
+            fig_size = fig_width * 1.5 if is_make_bigger else fig_width
+            slc.set_figure_size(fig_size)
     else:
-        # Width >= Height. Height is short side.
-        fig_height = short_size
-        fig_width = short_size / aspect
-        # set_figure_size sets the long dimension
-        fig_size = fig_width * 1.5 if is_close_to_square else fig_width
+        # square plot, make it bigger
+        fig_size = short_size * 1.5
         slc.set_figure_size(fig_size)
+        
     slc.set_font_size(font_size)
     
     # ========================================
