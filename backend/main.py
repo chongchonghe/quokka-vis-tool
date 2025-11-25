@@ -23,7 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.FATAL,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
@@ -383,8 +383,9 @@ def _generate_plot_image(
 
     # Annotations
     if grids:
-        slc.annotate_grids(edgecolors='white', linewidth=1)
+        slc.annotate_grids(edgecolors='white', linewidth=5)
     
+    print(f"timestamp={timestamp}")
     if timestamp:
         slc.annotate_timestamp()
 
