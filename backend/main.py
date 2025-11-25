@@ -482,9 +482,10 @@ def _generate_plot_image(
     Wx = ds.domain_width[x_ax_id].v
     Wy = ds.domain_width[y_ax_id].v
     aspect = float(Wy / Wx)
+    real_aspect = aspect if not is_squared else 1.0
     
-    scale_bar_x_loc = 0.5 if aspect > 1.3 else 0.15
-    scale_bar_y_loc = 0.15 if aspect < 1/1.3 else 0.1
+    scale_bar_x_loc = 0.5 if real_aspect > 1.3 else 0.15
+    scale_bar_y_loc = 0.15 if real_aspect < 1/1.3 else 0.1
     scale_bar_pos = (scale_bar_x_loc, scale_bar_y_loc)
     if scale_bar_size is not None and scale_bar_unit is not None:
         # Use custom scale bar size - positioned at lower center using pos parameter
@@ -577,7 +578,11 @@ def _add_derived_fields(ds):
     if ("gas", "number_density") not in ds.derived_field_list:
         def _number_density(field, data):
             return data[("gas", "density")] / mean_molecular_weight_per_H_atom
-        ds.add_field(("gas", "number_density"), function=_number_density, units="cm**-3", sampling_type="cell", force_override=True)
+        try:
+            ds.add_field(("gas", "number_density"), function=_number_density, units="cm**-3", sampling_type="cell", force_override=True)
+        except Exception as e:
+            print(f"Warning: Could not add number density field: {e}")
+            pass
 
     # Temperature (if not already present)
     if ("gas", "temperature") not in ds.derived_field_list:
@@ -591,7 +596,11 @@ def _add_derived_fields(ds):
             )
             eint = etot - kinetic_energy
             return eint * (gamma - 1.0) / (density / mean_molecular_weight_per_H_atom * k_B)
-        ds.add_field(("gas", "temperature"), function=_temperature_derived, units="K", sampling_type="cell", force_override=True)
+        try:
+            ds.add_field(("gas", "temperature"), function=_temperature_derived, units="K", sampling_type="cell", force_override=True)
+        except Exception as e:
+            print(f"Warning: Could not add temperature field: {e}")
+            pass
 
     # Velocity Magnitude
     if ("gas", "velocity_magnitude") not in ds.derived_field_list:
@@ -601,18 +610,11 @@ def _add_derived_fields(ds):
                 data[("gas", "velocity_y")]**2 + 
                 data[("gas", "velocity_z")]**2
             )
-        ds.add_field(("gas", "velocity_magnitude"), function=_velocity_magnitude, units="cm/s", sampling_type="cell", force_override=True)
-
-    # Momentum Density
-    if ("gas", "momentum_density") not in ds.derived_field_list:
-        def _momentum_density(field, data):
-            return np.sqrt(
-                data[("gas", "momentum_density_x")]**2 + 
-                data[("gas", "momentum_density_y")]**2 + 
-                data[("gas", "momentum_density_z")]**2
-            )
-        ds.add_field(("gas", "momentum_density"), function=_momentum_density, sampling_type="cell", force_override=True)
-
+        try:
+            ds.add_field(("gas", "velocity_magnitude"), function=_velocity_magnitude, units="cm/s", sampling_type="cell", force_override=True)
+        except Exception as e:
+            print(f"Warning: Could not add velocity magnitude field: {e}")
+            pass
 
 @app.get("/api/slice")
 def get_slice(
@@ -713,7 +715,7 @@ def get_fields():
     fields = [f[1] for f in ds.field_list if f[0] == 'boxlib']
     
     # Add our derived fields if they exist
-    derived_fields = ["temperature", "velocity_magnitude", "momentum_density", "number_density"]
+    derived_fields = ["temperature", "velocity_magnitude", "number_density"]
     for df in derived_fields:
         if ("gas", df) in ds.derived_field_list:
             fields.append(df)
