@@ -84,18 +84,30 @@
   text-align: right;
 }
 
-/* Hide spin buttons */
+/* Hide spin buttons by default, except for inputs with 'with-spinner' class */
 /* Chrome, Safari, Edge, Opera */
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button {
+input:not(.with-spinner)::-webkit-outer-spin-button,
+input:not(.with-spinner)::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 
 /* Firefox */
-input[type=number] {
+input[type=number]:not(.with-spinner) {
   -moz-appearance: textfield;
   appearance: textfield;
+}
+
+/* Show spin buttons for inputs with 'with-spinner' class */
+input.with-spinner::-webkit-outer-spin-button,
+input.with-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: inner-spin-button;
+  opacity: 1;
+}
+
+input[type=number].with-spinner {
+  -moz-appearance: number-input;
+  appearance: auto;
 }
 
 .animation-controls {

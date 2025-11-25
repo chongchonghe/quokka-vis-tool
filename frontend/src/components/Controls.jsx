@@ -196,10 +196,11 @@ function Controls({
               </label>
               <input 
                 type="number" 
+                className="with-spinner"
                 value={particleSize}
                 onChange={(e) => setParticleSize(Number(e.target.value))}
                 min="1"
-                max="100"
+                max="20"
                 style={{ width: '70px' }}
               />
             </div>
