@@ -27,6 +27,7 @@ function Controls({
   widthUnit, setWidthUnit,
   particles, setParticles,
   particleTypes,
+  particleSize, setParticleSize,
   grids, setGrids,
   timestamp, setTimestamp,
   topLeftText, setTopLeftText,
@@ -181,36 +182,61 @@ function Controls({
             paddingLeft: '0.5rem',
             display: 'flex',
             flexDirection: 'column',
-            gap: '0.25rem',
-            maxHeight: '200px',
-            overflowY: 'auto'
+            gap: '0.5rem'
           }}>
-            {particleTypes.length > 0 ? (
-              particleTypes.map(particleType => (
-                <label 
-                  key={particleType}
-                  style={{ 
-                    fontWeight: 'normal',
-                    fontSize: '0.9rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <input 
-                    type="checkbox" 
-                    checked={particles.includes(particleType)}
-                    onChange={() => handleParticleToggle(particleType)}
-                    style={{ width: 'auto', marginRight: '0.5rem' }}
-                  />
-                  {particleType}
-                </label>
-              ))
-            ) : (
-              <div style={{ fontSize: '0.85rem', color: '#888', fontStyle: 'italic' }}>
-                No particle types available
-              </div>
-            )}
+            <div style={{ 
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              paddingBottom: '0.5rem',
+              borderBottom: '1px solid #ddd'
+            }}>
+              <label style={{ fontWeight: 'normal', fontSize: '0.9rem', minWidth: '80px' }}>
+                Marker Size:
+              </label>
+              <input 
+                type="number" 
+                value={particleSize}
+                onChange={(e) => setParticleSize(Number(e.target.value))}
+                min="1"
+                max="100"
+                style={{ width: '70px' }}
+              />
+            </div>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.25rem',
+              maxHeight: '150px',
+              overflowY: 'auto'
+            }}>
+              {particleTypes.length > 0 ? (
+                particleTypes.map(particleType => (
+                  <label 
+                    key={particleType}
+                    style={{ 
+                      fontWeight: 'normal',
+                      fontSize: '0.9rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <input 
+                      type="checkbox" 
+                      checked={particles.includes(particleType)}
+                      onChange={() => handleParticleToggle(particleType)}
+                      style={{ width: 'auto', marginRight: '0.5rem' }}
+                    />
+                    {particleType}
+                  </label>
+                ))
+              ) : (
+                <div style={{ fontSize: '0.85rem', color: '#888', fontStyle: 'italic' }}>
+                  No particle types available
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

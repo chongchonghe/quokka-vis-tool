@@ -338,6 +338,7 @@ def _generate_plot_image(
     width_value: Optional[float],
     width_unit: Optional[str],
     particles: tuple, # tuple to be hashable
+    particle_size: int,
     grids: bool,
     timestamp: bool,
     top_left_text: Optional[str],
@@ -461,7 +462,7 @@ def _generate_plot_image(
                     pos = ad[(p_type, "particle_position_x")]
                     if len(pos) > 0:
                         # Annotate particles at a depth of 0.1 * boxsize
-                        slc.annotate_particles(Lx * 0.1, p_size=10, col='red', marker='o', ptype=p_type)
+                        slc.annotate_particles(Lx * 0.1, p_size=particle_size, col='red', marker='o', ptype=p_type)
                     else:
                         print(f"Warning: No {p_type} particles found in all_data()")
                 except yt.utilities.exceptions.YTFieldNotFound:
@@ -642,6 +643,7 @@ def get_slice(
     width_value: Optional[float] = None,
     width_unit: Optional[str] = None,
     particles: Optional[str] = None, # Comma separated string
+    particle_size: Optional[int] = None,
     grids: bool = False,
     timestamp: bool = False,
     top_left_text: Optional[str] = None,
@@ -658,9 +660,13 @@ def get_slice(
     SCALE_BAR_HEIGHT_FRACTION = config.get("scale_bar_height_fraction", 15)
     COLORMAP_FRACTION = config.get("colormap_fraction", 0.1)
     SHOW_AXES = config.get("show_axes", False)
+    DEFAULT_PARTICLE_SIZE = config.get("default_particle_size", 10)
 
     # Parse particles
     particle_list = tuple(p.strip() for p in particles.split(',')) if particles else ()
+    
+    # Use provided particle_size or default
+    p_size = particle_size if particle_size is not None else DEFAULT_PARTICLE_SIZE
 
     try:
         if coord is None:
@@ -688,6 +694,7 @@ def get_slice(
             width_value,
             width_unit,
             particle_list,
+            p_size,
             grids,
             timestamp,
             top_left_text,
@@ -734,17 +741,25 @@ def get_particle_types():
     """
     Get the list of available particle types from config.yaml.
     Each type is returned with '_particles' appended (e.g., 'Rad' -> 'Rad_particles')
+    Also returns the default particle size.
     """
     try:
         config = load_config()
         particle_types = config.get("particle_types", [])
+        default_particle_size = config.get("default_particle_size", 10)
         # Append '_particles' to each type
         particle_types_with_suffix = [f"{ptype}_particles" for ptype in particle_types]
-        return {"particle_types": particle_types_with_suffix}
+        return {
+            "particle_types": particle_types_with_suffix,
+            "default_particle_size": default_particle_size
+        }
     except Exception as e:
         print(f"Error loading particle types: {e}")
         # Return default list if config can't be loaded (with '_particles' suffix)
-        return {"particle_types": ["Rad_particles", "CIC_particles", "CICRad_particles", "StochasticStellarPop_particles", "Sink_particles"]}
+        return {
+            "particle_types": ["Rad_particles", "CIC_particles", "CICRad_particles", "StochasticStellarPop_particles", "Sink_particles"],
+            "default_particle_size": 10
+        }
 
 @app.get("/api/export/current_frame")
 def export_current_frame(
@@ -767,6 +782,7 @@ def export_current_frame(
     width_value: Optional[float] = None,
     width_unit: Optional[str] = None,
     particles: Optional[str] = None,
+    particle_size: Optional[int] = None,
     grids: bool = False,
     timestamp: bool = False,
     top_left_text: Optional[str] = None,
@@ -784,9 +800,13 @@ def export_current_frame(
     SCALE_BAR_HEIGHT_FRACTION = config.get("scale_bar_height_fraction", 15)
     COLORMAP_FRACTION = config.get("colormap_fraction", 0.1)
     SHOW_AXES = config.get("show_axes", False)
+    DEFAULT_PARTICLE_SIZE = config.get("default_particle_size", 10)
 
     # Parse particles
     particle_list = tuple(p.strip() for p in particles.split(',')) if particles else ()
+    
+    # Use provided particle_size or default
+    p_size = particle_size if particle_size is not None else DEFAULT_PARTICLE_SIZE
 
     try:
         if coord is None:
@@ -814,6 +834,7 @@ def export_current_frame(
             width_value,
             width_unit,
             particle_list,
+            p_size,
             grids,
             timestamp,
             top_left_text,
@@ -896,6 +917,7 @@ def export_animation(request: Request):
         width_value = body.get("width_value")
         width_unit = body.get("width_unit")
         particles = body.get("particles", "")
+        particle_size = body.get("particle_size")
         grids = body.get("grids", False)
         timestamp_anno = body.get("timestamp", False)
         top_left_text = body.get("top_left_text")
@@ -913,6 +935,7 @@ def export_animation(request: Request):
             SCALE_BAR_HEIGHT_FRACTION = config.get("scale_bar_height_fraction", 15)
             COLORMAP_FRACTION = config.get("colormap_fraction", 0.1)
             SHOW_AXES = config.get("show_axes", False)
+            DEFAULT_PARTICLE_SIZE = config.get("default_particle_size", 10)
         except Exception as e:
             print(f"Warning: Could not load config, using defaults: {e}")
             SHORT_SIZE = 3.6
@@ -920,6 +943,10 @@ def export_animation(request: Request):
             SCALE_BAR_HEIGHT_FRACTION = 15
             COLORMAP_FRACTION = 0.1
             SHOW_AXES = False
+            DEFAULT_PARTICLE_SIZE = 10
+        
+        # Use provided particle_size or default
+        p_size = particle_size if particle_size is not None else DEFAULT_PARTICLE_SIZE
         
         # Parse particles
         particle_list = tuple(p.strip() for p in particles.split(',')) if particles else ()
@@ -983,6 +1010,7 @@ def export_animation(request: Request):
                         width_value,
                         width_unit,
                         particle_list,
+                        p_size,
                         grids,
                         timestamp_anno,
                         top_left_text,

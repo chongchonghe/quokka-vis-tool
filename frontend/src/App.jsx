@@ -47,6 +47,7 @@ function App() {
   const [widthUnit, setWidthUnit] = useState('');
   const [particles, setParticles] = useState([]);  // Changed to array
   const [particleTypes, setParticleTypes] = useState([]);  // Available particle types
+  const [particleSize, setParticleSize] = useState(10);  // Particle marker size
   const [grids, setGrids] = useState(false);
   const [timestamp, setTimestamp] = useState(false);
   const [topLeftText, setTopLeftText] = useState('');
@@ -91,10 +92,12 @@ function App() {
       const res = await fetch('/api/particle_types');
       const data = await res.json();
       setParticleTypes(data.particle_types);
+      setParticleSize(data.default_particle_size || 10);
     } catch (err) {
       console.error("Failed to fetch particle types:", err);
       // Set default particle types if fetch fails
-      setParticleTypes(["Rad", "CIC", "CICRad", "StochasticStellarPop", "Sink"]);
+      setParticleTypes(["Rad_particles", "CIC_particles", "CICRad_particles", "StochasticStellarPop_particles", "Sink_particles"]);
+      setParticleSize(10);
     }
   };
 
@@ -312,6 +315,7 @@ function App() {
       if (appliedWidthValue) url += `&width_value=${appliedWidthValue}`;
       if (appliedWidthUnit) url += `&width_unit=${appliedWidthUnit}`;
       if (particles.length > 0) url += `&particles=${encodeURIComponent(particles.join(','))}`;
+      if (particleSize) url += `&particle_size=${particleSize}`;
       if (grids) url += `&grids=true`;
       if (timestamp) url += `&timestamp=true`;
       if (appliedTopLeftText) url += `&top_left_text=${encodeURIComponent(appliedTopLeftText)}`;
@@ -380,6 +384,7 @@ function App() {
         width_value: appliedWidthValue ? parseFloat(appliedWidthValue) : null,
         width_unit: appliedWidthUnit || null,
         particles: particles.length > 0 ? particles.join(',') : '',
+        particle_size: particleSize,
         grids: grids,
         timestamp: timestamp,
         top_left_text: appliedTopLeftText || null,
@@ -541,6 +546,7 @@ Full details in browser console (F12)`;
           widthUnit={widthUnit} setWidthUnit={setWidthUnit}
           particles={particles} setParticles={setParticles}
           particleTypes={particleTypes}
+          particleSize={particleSize} setParticleSize={setParticleSize}
           grids={grids} setGrids={setGrids}
           timestamp={timestamp} setTimestamp={setTimestamp}
           topLeftText={topLeftText} setTopLeftText={setTopLeftText}
@@ -577,6 +583,7 @@ Full details in browser console (F12)`;
           widthValue={appliedWidthValue}
           widthUnit={appliedWidthUnit}
           particles={particles.length > 0 ? particles.join(',') : ''}
+          particleSize={particleSize}
           grids={grids}
           timestamp={timestamp}
           topLeftText={appliedTopLeftText}
