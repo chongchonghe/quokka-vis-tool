@@ -500,12 +500,14 @@ def _generate_plot_image(
         # Height > Width. Width is short side.
         fig_width = short_size
         fig_height = short_size * aspect
+        # set_figure_size sets the long dimension
+        slc.set_figure_size(fig_height)
     else:
-        # Width > Height. Height is short side.
+        # Width >= Height. Height is short side.
         fig_height = short_size
         fig_width = short_size / aspect
-    
-    slc.set_figure_size(fig_width)
+        # set_figure_size sets the long dimension
+        slc.set_figure_size(fig_width)
     slc.set_font_size(font_size)
     
     # ========================================
