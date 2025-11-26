@@ -78,9 +78,28 @@ function Viewer({
   };
 
   return (
-    <div className="viewer-container">
-      {error && <div className="error">{error}</div>}
+    <div className="viewer-container" style={{ position: 'relative' }}>
       {imageUrl && <img src={imageUrl} alt="Slice" className="slice-image" />}
+      {error && (
+        <div style={{
+          position: 'absolute',
+          top: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: 'rgba(244, 67, 54, 0.95)',
+          color: 'white',
+          padding: '12px 24px',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          zIndex: 1000,
+          maxWidth: '80%',
+          textAlign: 'center',
+          fontSize: '14px',
+          fontWeight: '500'
+        }}>
+          {error}
+        </div>
+      )}
     </div>
   );
 }
