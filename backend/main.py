@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import Response
 import yt
+from yt.utilities.exceptions import YTCannotParseUnitDisplayName
 import unyt
 import os
 from typing import List, Optional
@@ -555,6 +556,15 @@ def _generate_plot_image(
         tmp_path = tmp_file.name
     
     try:
+        slc.save(tmp_path, mpl_kwargs={"dpi": dpi, "bbox_inches": "tight", "pad_inches": 0.05})
+        # Read the saved file into bytes
+        with open(tmp_path, 'rb') as f:
+            image_bytes = f.read()
+    except YTCannotParseUnitDisplayName as e:
+        # LaTeX parsing error in colorbar label - retry with simple field name
+        print(f"Warning: LaTeX parsing error in colorbar label: {e}")
+        print(f"Retrying with simplified colorbar label: {field}")
+        slc.set_colorbar_label(field_tuple, field)
         slc.save(tmp_path, mpl_kwargs={"dpi": dpi, "bbox_inches": "tight", "pad_inches": 0.05})
         # Read the saved file into bytes
         with open(tmp_path, 'rb') as f:
