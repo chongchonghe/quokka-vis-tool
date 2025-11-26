@@ -28,6 +28,7 @@ function Controls({
   particles, setParticles,
   particleTypes,
   particleSize, setParticleSize,
+  particleColor, setParticleColor,
   grids, setGrids,
   timestamp, setTimestamp,
   topLeftText, setTopLeftText,
@@ -186,23 +187,52 @@ function Controls({
           }}>
             <div style={{ 
               display: 'flex',
-              alignItems: 'center',
+              flexDirection: 'column',
               gap: '0.5rem',
               paddingBottom: '0.5rem',
               borderBottom: '1px solid #ddd'
             }}>
-              <label style={{ fontWeight: 'normal', fontSize: '0.9rem', minWidth: '80px' }}>
-                Marker Size:
-              </label>
-              <input 
-                type="number" 
-                className="with-spinner"
-                value={particleSize}
-                onChange={(e) => setParticleSize(Number(e.target.value))}
-                min="1"
-                max="20"
-                style={{ width: '70px' }}
-              />
+              <div style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <label style={{ fontWeight: 'normal', fontSize: '0.9rem', minWidth: '80px' }}>
+                  Marker Size:
+                </label>
+                <input 
+                  type="number" 
+                  className="with-spinner"
+                  value={particleSize}
+                  onChange={(e) => setParticleSize(Number(e.target.value))}
+                  min="1"
+                  max="20"
+                  style={{ width: '70px' }}
+                />
+              </div>
+              <div style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <label style={{ fontWeight: 'normal', fontSize: '0.9rem', minWidth: '80px' }}>
+                  Marker Color:
+                </label>
+                <select 
+                  value={particleColor}
+                  onChange={(e) => setParticleColor(e.target.value)}
+                  style={{ flex: 1 }}
+                >
+                  <option value="red">Red</option>
+                  <option value="white">White</option>
+                  <option value="black">Black</option>
+                  <option value="yellow">Yellow</option>
+                  <option value="cyan">Cyan</option>
+                  <option value="magenta">Magenta</option>
+                  <option value="lime">Lime</option>
+                  <option value="orange">Orange</option>
+                </select>
+              </div>
             </div>
             <div style={{
               display: 'flex',

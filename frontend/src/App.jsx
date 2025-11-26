@@ -48,6 +48,7 @@ function App() {
   const [particles, setParticles] = useState([]);  // Changed to array
   const [particleTypes, setParticleTypes] = useState([]);  // Available particle types
   const [particleSize, setParticleSize] = useState(10);  // Particle marker size
+  const [particleColor, setParticleColor] = useState('red');  // Particle color
   const [grids, setGrids] = useState(false);
   const [timestamp, setTimestamp] = useState(false);
   const [topLeftText, setTopLeftText] = useState('');
@@ -316,6 +317,7 @@ function App() {
       if (appliedWidthUnit) url += `&width_unit=${appliedWidthUnit}`;
       if (particles.length > 0) url += `&particles=${encodeURIComponent(particles.join(','))}`;
       if (particleSize) url += `&particle_size=${particleSize}`;
+      if (particleColor) url += `&particle_color=${encodeURIComponent(particleColor)}`;
       if (grids) url += `&grids=true`;
       if (timestamp) url += `&timestamp=true`;
       if (appliedTopLeftText) url += `&top_left_text=${encodeURIComponent(appliedTopLeftText)}`;
@@ -385,6 +387,7 @@ function App() {
         width_unit: appliedWidthUnit || null,
         particles: particles.length > 0 ? particles.join(',') : '',
         particle_size: particleSize,
+        particle_color: particleColor,
         grids: grids,
         timestamp: timestamp,
         top_left_text: appliedTopLeftText || null,
@@ -547,6 +550,7 @@ Full details in browser console (F12)`;
           particles={particles} setParticles={setParticles}
           particleTypes={particleTypes}
           particleSize={particleSize} setParticleSize={setParticleSize}
+          particleColor={particleColor} setParticleColor={setParticleColor}
           grids={grids} setGrids={setGrids}
           timestamp={timestamp} setTimestamp={setTimestamp}
           topLeftText={topLeftText} setTopLeftText={setTopLeftText}
@@ -584,6 +588,7 @@ Full details in browser console (F12)`;
           widthUnit={appliedWidthUnit}
           particles={particles.length > 0 ? particles.join(',') : ''}
           particleSize={particleSize}
+          particleColor={particleColor}
           grids={grids}
           timestamp={timestamp}
           topLeftText={appliedTopLeftText}

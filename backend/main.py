@@ -339,6 +339,7 @@ def _generate_plot_image(
     width_unit: Optional[str],
     particles: tuple, # tuple to be hashable
     particle_size: int,
+    particle_color: str,
     grids: bool,
     timestamp: bool,
     top_left_text: Optional[str],
@@ -462,7 +463,7 @@ def _generate_plot_image(
                     pos = ad[(p_type, "particle_position_x")]
                     if len(pos) > 0:
                         # Annotate particles at a depth of 0.1 * boxsize
-                        slc.annotate_particles(Lx * 0.1, p_size=particle_size, col='red', marker='o', ptype=p_type)
+                        slc.annotate_particles(Lx * 0.1, p_size=particle_size, col=particle_color, marker='o', ptype=p_type)
                     else:
                         print(f"Warning: No {p_type} particles found in all_data()")
                 except yt.utilities.exceptions.YTFieldNotFound:
@@ -644,6 +645,7 @@ def get_slice(
     width_unit: Optional[str] = None,
     particles: Optional[str] = None, # Comma separated string
     particle_size: Optional[int] = None,
+    particle_color: str = "red",
     grids: bool = False,
     timestamp: bool = False,
     top_left_text: Optional[str] = None,
@@ -695,6 +697,7 @@ def get_slice(
             width_unit,
             particle_list,
             p_size,
+            particle_color,
             grids,
             timestamp,
             top_left_text,
@@ -783,6 +786,7 @@ def export_current_frame(
     width_unit: Optional[str] = None,
     particles: Optional[str] = None,
     particle_size: Optional[int] = None,
+    particle_color: str = "red",
     grids: bool = False,
     timestamp: bool = False,
     top_left_text: Optional[str] = None,
@@ -835,6 +839,7 @@ def export_current_frame(
             width_unit,
             particle_list,
             p_size,
+            particle_color,
             grids,
             timestamp,
             top_left_text,
@@ -918,6 +923,7 @@ def export_animation(request: Request):
         width_unit = body.get("width_unit")
         particles = body.get("particles", "")
         particle_size = body.get("particle_size")
+        particle_color = body.get("particle_color", "red")
         grids = body.get("grids", False)
         timestamp_anno = body.get("timestamp", False)
         top_left_text = body.get("top_left_text")
@@ -1011,6 +1017,7 @@ def export_animation(request: Request):
                         width_unit,
                         particle_list,
                         p_size,
+                        particle_color,
                         grids,
                         timestamp_anno,
                         top_left_text,
