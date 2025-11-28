@@ -62,10 +62,9 @@ function Controls({
       </div>
 
       <div className="control-group">
-        <label>Animation:</label>
         <div className="animation-controls">
           <button onClick={() => setIsPlaying(!isPlaying)}>
-            {isPlaying ? 'Pause' : 'Play'}
+            {isPlaying ? 'Pause Animation' : 'Play Animation'}
           </button>
 
           <div className="fps-buttons">
@@ -138,29 +137,22 @@ function Controls({
       </div>
 
       <div className="control-group">
-        <label>Limits (Min / Max):</label>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ fontWeight: 'normal', fontSize: '0.9rem' }}>Min:</label>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <label style={{ fontWeight: 'normal', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>Min:</label>
             <input type="number" value={vmin} onChange={(e) => setVmin(e.target.value)} placeholder="Auto" />
           </div>
-          <div style={{ flex: 1 }}>
-            <label style={{ fontWeight: 'normal', fontSize: '0.9rem' }}>Max:</label>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <label style={{ fontWeight: 'normal', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>Max:</label>
             <input type="number" value={vmax} onChange={(e) => setVmax(e.target.value)} placeholder="Auto" />
           </div>
         </div>
       </div>
 
-      <div className="control-group">
+      <div className="control-group compact">
         <label>Width:</label>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <div style={{ flex: 1 }}>
-             <input type="number" value={widthValue} onChange={(e) => setWidthValue(e.target.value)} placeholder="Full" />
-          </div>
-          <div style={{ flex: 1 }}>
-             <input type="text" value={widthUnit} onChange={(e) => setWidthUnit(e.target.value)} placeholder="Unit (e.g. kpc)" />
-          </div>
-        </div>
+        <input type="number" value={widthValue} onChange={(e) => setWidthValue(e.target.value)} placeholder="Full" style={{ flex: 1 }} />
+        <input type="text" value={widthUnit} onChange={(e) => setWidthUnit(e.target.value)} placeholder="Unit (e.g. kpc)" style={{ flex: 1 }} />
       </div>
 
       <div className="control-group">
@@ -272,15 +264,15 @@ function Controls({
         )}
       </div>
 
-      <div className="control-group">
+      <div className="control-group compact">
         <label>Annotations:</label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-          <label style={{ fontWeight: 'normal' }}>
-            <input type="checkbox" checked={grids} onChange={(e) => setGrids(e.target.checked)} style={{ width: 'auto', marginRight: '0.5rem' }} />
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <label style={{ fontWeight: 'normal', fontSize: '0.9rem', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
+            <input type="checkbox" checked={grids} onChange={(e) => setGrids(e.target.checked)} style={{ width: 'auto', marginRight: '0.3rem' }} />
             Grids
           </label>
-          <label style={{ fontWeight: 'normal' }}>
-            <input type="checkbox" checked={timestamp} onChange={(e) => setTimestamp(e.target.checked)} style={{ width: 'auto', marginRight: '0.5rem' }} />
+          <label style={{ fontWeight: 'normal', fontSize: '0.9rem', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
+            <input type="checkbox" checked={timestamp} onChange={(e) => setTimestamp(e.target.checked)} style={{ width: 'auto', marginRight: '0.3rem' }} />
             Timestamp
           </label>
         </div>
@@ -309,16 +301,15 @@ function Controls({
           Show Colorbar
         </label>
         {showColorbar && (
-          <div style={{ marginTop: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
             <label style={{ fontWeight: 'normal', fontSize: '0.9rem' }}>Label:</label>
             <input 
               type="text" 
               value={colorbarLabel} 
               onChange={(e) => setColorbarLabel(e.target.value)} 
               placeholder="Default"
-              style={{ marginTop: '0.2rem' }}
+              style={{ flexGrow: 1 }}
             />
-
           </div>
         )}
       </div>
@@ -334,26 +325,24 @@ function Controls({
           Show Scale Bar
         </label>
         {showScaleBar && (
-          <div style={{ marginTop: '0.5rem', paddingLeft: '1.5rem' }}>
-            <label style={{ fontWeight: 'normal', fontSize: '0.9rem', display: 'block', marginBottom: '0.25rem' }}>
-              Custom Size (optional):
+          <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label style={{ fontWeight: 'normal', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+              Custom Size:
             </label>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <input 
-                type="text" 
-                value={scaleBarSize} 
-                onChange={(e) => setScaleBarSize(e.target.value)} 
-                placeholder="Auto"
-                style={{ width: '80px' }}
-              />
-              <input 
-                type="text" 
-                value={scaleBarUnit} 
-                onChange={(e) => setScaleBarUnit(e.target.value)} 
-                placeholder="Unit"
-                style={{ width: '60px' }}
-              />
-            </div>
+            <input 
+              type="text" 
+              value={scaleBarSize} 
+              onChange={(e) => setScaleBarSize(e.target.value)} 
+              placeholder="Auto"
+              style={{ flexGrow: 1 }}
+            />
+            <input 
+              type="text" 
+              value={scaleBarUnit} 
+              onChange={(e) => setScaleBarUnit(e.target.value)} 
+              placeholder="Unit"
+              style={{ flexGrow: 1 }}
+            />
           </div>
         )}
       </div>

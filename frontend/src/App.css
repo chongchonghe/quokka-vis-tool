@@ -82,8 +82,8 @@
 .control-group.compact label {
   margin-bottom: 0;
   white-space: nowrap;
-  min-width: 55px;
-  text-align: right;
+  min-width: 75px;
+  text-align: left;
   font-size: 0.85rem;
 }
 
