@@ -47,34 +47,6 @@ logger = logging.getLogger(__name__)
 
 yt.set_log_level(40) # 40 = Error
 
-# Robustly turn on YT parallelization
-try:
-    import multiprocessing
-    # Limit OpenMP threads to at most 16
-    num_cpus = multiprocessing.cpu_count()
-    num_threads = min(num_cpus, 16)
-    os.environ["OMP_NUM_THREADS"] = str(num_threads)
-    
-    # Enable YT parallelism
-    # This enables MPI if available and run with mpirun.
-    # NOTE: For this interactive web server, we rely primarily on OpenMP threading (OMP_NUM_THREADS)
-    # rather than MPI (mpirun). 
-    # - Running 'mpirun uvicorn ...' would spawn multiple web servers fighting for the same port.
-    # - OpenMP allows the single web server process to use multiple cores for heavy yt operations (pixelization).
-    # - MPI is best reserved for batch tasks (like animation export) launched via subprocess.
-    
-    # Check if we are running under MPI (OpenMPI sets OMPI_COMM_WORLD_SIZE, others use PMI_SIZE)
-    is_mpi = os.environ.get("OMPI_COMM_WORLD_SIZE") or os.environ.get("PMI_SIZE")
-    
-    if is_mpi:
-        yt.enable_parallelism()
-        logger.info(f"YT MPI parallelism enabled. OMP_NUM_THREADS set to {num_threads}")
-    else:
-        logger.info(f"Running in serial mode (no MPI). YT parallelism via OpenMP only. OMP_NUM_THREADS set to {num_threads}")
-
-except Exception as e:
-    logger.warning(f"Could not configure parallelism: {e}")
-
 def load_config():
     config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
     with open(config_path, "r") as f:
