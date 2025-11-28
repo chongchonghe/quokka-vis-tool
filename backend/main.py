@@ -9,6 +9,11 @@ from functools import lru_cache
 import io
 import matplotlib
 matplotlib.use('Agg')
+# Optimize matplotlib performance
+matplotlib.rcParams['text.usetex'] = False
+matplotlib.rcParams['path.simplify'] = True
+matplotlib.rcParams['path.simplify_threshold'] = 1.0
+matplotlib.rcParams['agg.path.chunksize'] = 10000
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
@@ -26,6 +31,8 @@ from datetime import datetime
 import shutil
 
 from fastapi.middleware.cors import CORSMiddleware
+
+
 
 # Configure logging
 logging.basicConfig(
