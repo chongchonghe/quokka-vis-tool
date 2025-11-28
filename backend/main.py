@@ -603,21 +603,46 @@ def _add_derived_fields(ds):
 
     # Temperature (if not already present)
     if ("gas", "temperature") not in ds.derived_field_list:
-        def _temperature_derived(field, data):
-            etot = data[("gas", "total_energy_density")]
-            density = data[("gas", "density")]
-            kinetic_energy = 0.5 * density * (
-                data[("gas", "velocity_x")]**2 + 
-                data[("gas", "velocity_y")]**2 + 
-                data[("gas", "velocity_z")]**2
+        # Check if total_energy_density field exists
+        has_total_energy = (
+            ("gas", "total_energy_density") in ds.field_list or 
+            ("gas", "total_energy_density") in ds.derived_field_list
+        )
+        
+        if has_total_energy:
+            # Use total_energy_density to derive temperature
+            def _temperature_derived(field, data):
+                etot = data[("gas", "total_energy_density")]
+                density = data[("gas", "density")]
+                kinetic_energy = 0.5 * density * (
+                    data[("gas", "velocity_x")]**2 + 
+                    data[("gas", "velocity_y")]**2 + 
+                    data[("gas", "velocity_z")]**2
+                )
+                eint = etot - kinetic_energy
+                return eint * (gamma - 1.0) / (density / mean_molecular_weight_per_H_atom * k_B)
+            try:
+                ds.add_field(("gas", "temperature"), function=_temperature_derived, units="K", sampling_type="cell", force_override=True)
+                print("Temperature field added using total_energy_density")
+            except Exception as e:
+                print(f"Warning: Could not add temperature field via total_energy_density: {e}")
+        else:
+            # Fall back to internal_energy_density
+            has_internal_energy = (
+                ("gas", "internal_energy_density") in ds.field_list or 
+                ("gas", "internal_energy_density") in ds.derived_field_list
             )
-            eint = etot - kinetic_energy
-            return eint * (gamma - 1.0) / (density / mean_molecular_weight_per_H_atom * k_B)
-        try:
-            ds.add_field(("gas", "temperature"), function=_temperature_derived, units="K", sampling_type="cell", force_override=True)
-        except Exception as e:
-            print(f"Warning: Could not add temperature field: {e}")
-            pass
+            
+            if has_internal_energy:
+                def _temperature_from_internal(field, data):
+                    return data[("gas", "internal_energy_density")] * (gamma - 1.0) / (data[("gas", "density")] / mean_molecular_weight_per_H_atom * k_B)
+                try:
+                    ds.add_field(("gas", "temperature"), function=_temperature_from_internal, units="K", sampling_type="cell", force_override=True)
+                    print("Temperature field added using internal_energy_density")
+                except Exception as e:
+                    print(f"Warning: Could not add temperature field via internal_energy_density: {e}")
+            else:
+                print("Warning: Neither total_energy_density nor internal_energy_density found. Temperature field not added.")
 
     # Velocity Magnitude
     if ("gas", "velocity_magnitude") not in ds.derived_field_list:
