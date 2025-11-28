@@ -399,7 +399,7 @@ def _generate_plot_image(
     # ========================================
     # Configure plot properties
     # ========================================
-    # Set units if specified
+    # Set units if specified (for custom unit display)
     if field_unit is not None and field_unit != "":
         try:
             slc.set_unit(field_tuple, field_unit)
@@ -416,38 +416,10 @@ def _generate_plot_image(
         slc.set_width((width_value, width_unit))
         is_squared = True
     
-    # Set colorbar label (do this after setting unit so label reflects the custom unit)
-    if show_colorbar:
-        if colorbar_label:
-            label = colorbar_label
-        else:
-            try:
-                # Get the field info
-                field_info = ds.field_info[field_tuple]
-                field_name = field_info.display_name
-                
-                # Determine the appropriate units for the label
-                if field_unit is not None and field_unit != "":
-                    # Use the custom unit that was set
-                    display_units = field_unit
-                elif kind == "prj" and weight is None:
-                    # For projection plots without weight field, yt integrates along the axis
-                    # so the units become field_unit * length_unit
-                    field_units = field_info.units
-                    length_unit = ds.length_unit
-                    integrated_units = field_units * length_unit
-                    display_units = str(integrated_units)
-                else:
-                    # For slice plots or weighted projections, use the original field units
-                    display_units = str(field_info.units)
-                
-                # Create the label with the appropriate units
-                label = f"{field_name} ({display_units})"
-            except Exception as e:
-                print(f"Warning: Could not get field label: {e}")
-                label = field
-        
-        slc.set_colorbar_label(field_tuple, label)
+    # Set colorbar label only if user provides a custom one
+    # YT automatically generates proper labels with units otherwise
+    if show_colorbar and colorbar_label:
+        slc.set_colorbar_label(field_tuple, colorbar_label)
     
     # Set vmin/vmax if provided
     if vmin is not None and vmax is not None:
@@ -564,7 +536,6 @@ def _generate_plot_image(
         slc.hide_axes(draw_frame=True)
     
     if not show_colorbar:
-        slc.set_colorbar_label(field_tuple, "")
         slc.hide_colorbar()
     
     # Save to temporary file then read into BytesIO
@@ -614,7 +585,10 @@ def _add_derived_fields(ds):
         def _number_density(field, data):
             return data[("gas", "density")] / mean_molecular_weight_per_H_atom
         try:
-            ds.add_field(("gas", "number_density"), function=_number_density, units="cm**-3", sampling_type="cell", force_override=True)
+            # Let YT automatically determine units from the calculation
+            ds.add_field(("gas", "number_density"), function=_number_density, 
+                        units="auto", sampling_type="cell", force_override=True,
+                        display_name="Number Density")
         except Exception as e:
             print(f"Warning: Could not add number density field: {e}")
             pass
@@ -640,7 +614,10 @@ def _add_derived_fields(ds):
                 eint = etot - kinetic_energy
                 return eint * (gamma - 1.0) / (density / mean_molecular_weight_per_H_atom * k_B)
             try:
-                ds.add_field(("gas", "temperature"), function=_temperature_derived, units="K", sampling_type="cell", force_override=True)
+                # Let YT automatically determine units from the calculation
+                ds.add_field(("gas", "temperature"), function=_temperature_derived, 
+                           units="auto", sampling_type="cell", force_override=True,
+                           display_name="Temperature")
                 print("Temperature field added using total_energy_density")
             except Exception as e:
                 print(f"Warning: Could not add temperature field via total_energy_density: {e}")
@@ -655,7 +632,10 @@ def _add_derived_fields(ds):
                 def _temperature_from_internal(field, data):
                     return data[("gas", "internal_energy_density")] * (gamma - 1.0) / (data[("gas", "density")] / mean_molecular_weight_per_H_atom * k_B)
                 try:
-                    ds.add_field(("gas", "temperature"), function=_temperature_from_internal, units="K", sampling_type="cell", force_override=True)
+                    # Let YT automatically determine units from the calculation
+                    ds.add_field(("gas", "temperature"), function=_temperature_from_internal, 
+                               units="auto", sampling_type="cell", force_override=True,
+                               display_name="Temperature")
                     print("Temperature field added using internal_energy_density")
                 except Exception as e:
                     print(f"Warning: Could not add temperature field via internal_energy_density: {e}")
@@ -671,7 +651,10 @@ def _add_derived_fields(ds):
                 data[("gas", "velocity_z")]**2
             )
         try:
-            ds.add_field(("gas", "velocity_magnitude"), function=_velocity_magnitude, units="cm/s", sampling_type="cell", force_override=True)
+            # Let YT automatically determine units from the calculation
+            ds.add_field(("gas", "velocity_magnitude"), function=_velocity_magnitude, 
+                        units="auto", sampling_type="cell", force_override=True,
+                        display_name="Velocity Magnitude")
         except Exception as e:
             print(f"Warning: Could not add velocity magnitude field: {e}")
             pass
