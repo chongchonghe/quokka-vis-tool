@@ -375,6 +375,8 @@ function Controls({
           step="10"
         />
       </div>
+      
+      <button onClick={onRefresh}>Refresh</button>
 
       <div className="control-group">
         <label>Export:</label>
@@ -422,8 +424,6 @@ function Controls({
           )}
         </div>
       </div>
-      
-      <button onClick={onRefresh}>Refresh</button>
     </div>
   );
 }
