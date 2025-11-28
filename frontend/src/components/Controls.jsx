@@ -287,14 +287,6 @@ function Controls({
       </div>
 
       <div className="control-group">
-        <label>Text Annotations:</label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <input type="text" value={topLeftText} onChange={(e) => setTopLeftText(e.target.value)} placeholder="Top Left Text" />
-          <input type="text" value={topRightText} onChange={(e) => setTopRightText(e.target.value)} placeholder="Top Right Text" />
-        </div>
-      </div>
-
-      <div className="control-group">
         <label>
           <input 
             type="checkbox" 
@@ -378,8 +370,14 @@ function Controls({
       
       <button onClick={onRefresh}>Refresh</button>
 
+      <div className="control-group" style={{ marginTop: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <input type="text" value={topLeftText} onChange={(e) => setTopLeftText(e.target.value)} placeholder="Top Left Text" />
+          <input type="text" value={topRightText} onChange={(e) => setTopRightText(e.target.value)} placeholder="Top Right Text" />
+        </div>
+      </div>
+
       <div className="control-group">
-        <label>Export:</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <button 
             onClick={onExportCurrentFrame} 
@@ -389,23 +387,21 @@ function Controls({
             Export Current Frame (PNG)
           </button>
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <label style={{ fontWeight: 'normal', fontSize: '0.9rem', minWidth: '60px' }}>FPS:</label>
-              <select 
-                value={exportFps} 
-                onChange={(e) => setExportFps(Number(e.target.value))}
-                style={{ flex: 1 }}
-              >
-                {[1, 3, 5, 10, 15, 30].map(val => (
-                  <option key={val} value={val}>{val}</option>
-                ))}
-              </select>
-            </div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <label style={{ fontWeight: 'normal', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>FPS:</label>
+            <select 
+              value={exportFps} 
+              onChange={(e) => setExportFps(Number(e.target.value))}
+              style={{ width: '60px' }}
+            >
+              {[1, 3, 5, 10, 15, 30].map(val => (
+                <option key={val} value={val}>{val}</option>
+              ))}
+            </select>
             <button 
               onClick={onExportAnimation} 
               disabled={isExporting}
-              style={{ width: '100%' }}
+              style={{ flex: 1 }}
             >
               Export Animation (ZIP)
             </button>
