@@ -452,16 +452,25 @@ function App() {
               Data Dir: {serverInfo.current_data_directory}
             </div>
           )}
-          <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ marginBottom: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.2rem' }}>Data Dir:</label>
+            <textarea 
+              value={dataDir} 
+              onChange={(e) => setDataDir(e.target.value)} 
+              placeholder={serverInfo ? "/path/on/" + serverInfo.hostname : "/path/to/data"}
+              style={{ 
+                width: '100%', 
+                padding: '0.4rem', 
+                resize: 'vertical',
+                minHeight: '2.5rem',
+                fontFamily: 'monospace',
+                fontSize: '0.85rem',
+                border: '1px solid #ccc',
+                borderRadius: '4px'
+              }}
+            />
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <input 
-                type="text" 
-                value={dataDir} 
-                onChange={(e) => setDataDir(e.target.value)} 
-                placeholder={serverInfo ? "/path/on/" + serverInfo.hostname : "/path/to/data"}
-                style={{ flex: 1, padding: '0.25rem' }}
-              />
-              <button onClick={handleSetDataDir} style={{ padding: '0.25rem 0.5rem' }}>Set</button>
+              <button onClick={handleSetDataDir} style={{ padding: '0.3rem 0.6rem', flex: 1 }}>Set</button>
               <button 
                 onClick={() => {
                   if (!dataDir) {
@@ -488,21 +497,21 @@ Full details in browser console (F12)`;
                     }
                   });
                 }} 
-                style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                style={{ padding: '0.3rem 0.6rem', fontSize: '0.85rem', flex: 1 }}
                 title="Test if path exists on server"
               >
                 Test
               </button>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <label style={{ fontSize: '0.9rem' }}>Prefix:</label>
+              <label style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>Prefix:</label>
               <input 
                 type="text" 
                 value={datasetPrefix} 
                 onChange={(e) => setDatasetPrefix(e.target.value)} 
-                style={{ flex: 1, padding: '0.25rem' }}
+                style={{ flex: 1, padding: '0.4rem', fontSize: '0.85rem' }}
               />
-              <button onClick={fetchDatasets} style={{ padding: '0.25rem 0.5rem' }}>Filter</button>
+              <button onClick={fetchDatasets} style={{ padding: '0.3rem 0.6rem', fontSize: '0.85rem' }}>Filter</button>
             </div>
           </div>
           {datasetInfo && <span className="dataset-info">Loaded: {currentDataset}</span>}
