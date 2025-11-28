@@ -416,30 +416,33 @@ def _generate_plot_image(
         slc.set_width((width_value, width_unit))
         is_squared = True
     
-    # Set colorbar label (do this before setting zlim)
+    # Set colorbar label (do this after setting unit so label reflects the custom unit)
     if show_colorbar:
         if colorbar_label:
             label = colorbar_label
         else:
             try:
-                # For projection plots without weight field, yt integrates along the axis
-                # so the units become field_unit * length_unit
-                if kind == "prj" and weight is None:
-                    # Get the field info
-                    field_info = ds.field_info[field_tuple]
-                    # Get the base field label (without units)
-                    field_name = field_info.display_name
-                    # Get the field units
+                # Get the field info
+                field_info = ds.field_info[field_tuple]
+                field_name = field_info.display_name
+                
+                # Determine the appropriate units for the label
+                if field_unit is not None and field_unit != "":
+                    # Use the custom unit that was set
+                    display_units = field_unit
+                elif kind == "prj" and weight is None:
+                    # For projection plots without weight field, yt integrates along the axis
+                    # so the units become field_unit * length_unit
                     field_units = field_info.units
-                    # Get the length unit from the dataset
                     length_unit = ds.length_unit
-                    # Construct the integrated units
                     integrated_units = field_units * length_unit
-                    # Create the label with integrated units
-                    label = f"{field_name} ({integrated_units})"
+                    display_units = str(integrated_units)
                 else:
-                    # For slice plots or weighted projections, use the standard label
-                    label = ds.field_info[field_tuple].get_label()
+                    # For slice plots or weighted projections, use the original field units
+                    display_units = str(field_info.units)
+                
+                # Create the label with the appropriate units
+                label = f"{field_name} ({display_units})"
             except Exception as e:
                 print(f"Warning: Could not get field label: {e}")
                 label = field
