@@ -69,7 +69,7 @@ function Controls({
           </button>
 
           <div className="fps-buttons">
-            {[1, 3, 5, 10, 15, 30].map(val => (
+            {[0.3, 0.5, 1, 2, 3, 5].map(val => (
               <button 
                 key={val} 
                 onClick={() => setFps(val)}

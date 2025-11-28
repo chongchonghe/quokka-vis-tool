@@ -20,7 +20,7 @@ function App() {
   const [datasets, setDatasets] = useState([]);
   const [currentDataset, setCurrentDataset] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
-  const [fps, setFps] = useState(1);
+  const [fps, setFps] = useState(0.5);
   const [showColorbar, setShowColorbar] = useState(false);
   const [vmin, setVmin] = useState('');
   const [vmax, setVmax] = useState('');
