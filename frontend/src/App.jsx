@@ -45,6 +45,7 @@ function App() {
   const [weightField, setWeightField] = useState('None');
   const [widthValue, setWidthValue] = useState('');
   const [widthUnit, setWidthUnit] = useState('');
+  const [fieldUnit, setFieldUnit] = useState('');
   const [particles, setParticles] = useState([]);  // Changed to array
   const [particleTypes, setParticleTypes] = useState([]);  // Available particle types
   const [particleSize, setParticleSize] = useState(10);  // Particle marker size
@@ -59,6 +60,7 @@ function App() {
   const [appliedWeightField, setAppliedWeightField] = useState('None');
   const [appliedWidthValue, setAppliedWidthValue] = useState('');
   const [appliedWidthUnit, setAppliedWidthUnit] = useState('');
+  const [appliedFieldUnit, setAppliedFieldUnit] = useState('');
   const [appliedTopLeftText, setAppliedTopLeftText] = useState('');
   const [appliedTopRightText, setAppliedTopRightText] = useState('');
 
@@ -287,6 +289,7 @@ function App() {
     setAppliedWeightField(weightField);
     setAppliedWidthValue(widthValue);
     setAppliedWidthUnit(widthUnit);
+    setAppliedFieldUnit(fieldUnit);
     setAppliedTopLeftText(topLeftText);
     setAppliedTopRightText(topRightText);
 
@@ -315,6 +318,7 @@ function App() {
       if (appliedScaleBarUnit) url += `&scale_bar_unit=${encodeURIComponent(appliedScaleBarUnit)}`;
       if (appliedWidthValue) url += `&width_value=${appliedWidthValue}`;
       if (appliedWidthUnit) url += `&width_unit=${appliedWidthUnit}`;
+      if (appliedFieldUnit) url += `&field_unit=${encodeURIComponent(appliedFieldUnit)}`;
       if (particles.length > 0) url += `&particles=${encodeURIComponent(particles.join(','))}`;
       if (particleSize) url += `&particle_size=${particleSize}`;
       if (particleColor) url += `&particle_color=${encodeURIComponent(particleColor)}`;
@@ -385,6 +389,7 @@ function App() {
         scale_bar_unit: appliedScaleBarUnit || null,
         width_value: appliedWidthValue ? parseFloat(appliedWidthValue) : null,
         width_unit: appliedWidthUnit || null,
+        field_unit: appliedFieldUnit || null,
         particles: particles.length > 0 ? particles.join(',') : '',
         particle_size: particleSize,
         particle_color: particleColor,
@@ -556,6 +561,7 @@ Full details in browser console (F12)`;
           weightField={weightField} setWeightField={setWeightField}
           widthValue={widthValue} setWidthValue={setWidthValue}
           widthUnit={widthUnit} setWidthUnit={setWidthUnit}
+          fieldUnit={fieldUnit} setFieldUnit={setFieldUnit}
           particles={particles} setParticles={setParticles}
           particleTypes={particleTypes}
           particleSize={particleSize} setParticleSize={setParticleSize}
@@ -595,6 +601,7 @@ Full details in browser console (F12)`;
           weightField={appliedWeightField}
           widthValue={appliedWidthValue}
           widthUnit={appliedWidthUnit}
+          fieldUnit={appliedFieldUnit}
           particles={particles.length > 0 ? particles.join(',') : ''}
           particleSize={particleSize}
           particleColor={particleColor}

@@ -6,7 +6,7 @@ function Viewer({
   showScaleBar, scaleBarSize, scaleBarUnit, 
   dpi,
   // New props
-  plotType, weightField, widthValue, widthUnit, particles, particleSize, particleColor, grids, timestamp, topLeftText, topRightText
+  plotType, weightField, widthValue, widthUnit, fieldUnit, particles, particleSize, particleColor, grids, timestamp, topLeftText, topRightText
 }) {
   const [imageUrl, setImageUrl] = useState(null);
   const [error, setError] = useState(null);
@@ -19,7 +19,7 @@ function Viewer({
     axis, field, coord, refreshTrigger, 
     showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, cmap,
     showScaleBar, scaleBarSize, scaleBarUnit, dpi,
-    plotType, weightField, widthValue, widthUnit, particles, particleSize, particleColor, grids, timestamp, topLeftText, topRightText
+    plotType, weightField, widthValue, widthUnit, fieldUnit, particles, particleSize, particleColor, grids, timestamp, topLeftText, topRightText
   ]);
 
   const fetchImage = async () => {
@@ -54,6 +54,7 @@ function Viewer({
       if (weightField && weightField !== 'None') url += `&weight_field=${weightField}`;
       if (widthValue) url += `&width_value=${widthValue}`;
       if (widthUnit) url += `&width_unit=${widthUnit}`;
+      if (fieldUnit) url += `&field_unit=${encodeURIComponent(fieldUnit)}`;
       if (particles) url += `&particles=${encodeURIComponent(particles)}`;
       if (particleSize) url += `&particle_size=${particleSize}`;
       if (particleColor) url += `&particle_color=${encodeURIComponent(particleColor)}`;

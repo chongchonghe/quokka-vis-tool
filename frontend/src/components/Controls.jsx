@@ -25,6 +25,7 @@ function Controls({
   weightField, setWeightField,
   widthValue, setWidthValue,
   widthUnit, setWidthUnit,
+  fieldUnit, setFieldUnit,
   particles, setParticles,
   particleTypes,
   particleSize, setParticleSize,
@@ -117,6 +118,17 @@ function Controls({
             <option key={f} value={f}>{f}</option>
           ))}
         </select>
+      </div>
+
+      <div className="control-group compact">
+        <label>Field Unit:</label>
+        <input 
+          type="text" 
+          value={fieldUnit} 
+          onChange={(e) => setFieldUnit(e.target.value)} 
+          placeholder="e.g. Msun/pc**3"
+          style={{ flex: 1 }}
+        />
       </div>
 
       <div className="control-group compact">

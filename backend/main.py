@@ -356,7 +356,8 @@ def _generate_plot_image(
     font_size: int,
     scale_bar_height_fraction: float,
     colormap_fraction: float,
-    show_axes: bool
+    show_axes: bool,
+    field_unit: Optional[str]
 ):
     # Ensure global ds matches dataset_path
     global ds
@@ -398,6 +399,13 @@ def _generate_plot_image(
     # ========================================
     # Configure plot properties
     # ========================================
+    # Set units if specified
+    if field_unit is not None and field_unit != "":
+        try:
+            slc.set_unit(field_tuple, field_unit)
+        except Exception as e:
+            print(f"Warning: Could not set unit '{field_unit}' for field {field_tuple}: {e}")
+    
     slc.set_cmap(field_tuple, cmap)
     slc.set_log(field_tuple, log_scale)
     slc.set_background_color(field_tuple, 'black')
@@ -691,7 +699,8 @@ def get_slice(
     grids: bool = False,
     timestamp: bool = False,
     top_left_text: Optional[str] = None,
-    top_right_text: Optional[str] = None
+    top_right_text: Optional[str] = None,
+    field_unit: Optional[str] = None
 ):
     global ds, current_dataset_path
     if ds is None:
@@ -748,7 +757,8 @@ def get_slice(
             FONT_SIZE,
             SCALE_BAR_HEIGHT_FRACTION,
             COLORMAP_FRACTION,
-            SHOW_AXES
+            SHOW_AXES,
+            field_unit
         )
         
         return Response(content=image_bytes, media_type="image/png")
@@ -832,7 +842,8 @@ def export_current_frame(
     grids: bool = False,
     timestamp: bool = False,
     top_left_text: Optional[str] = None,
-    top_right_text: Optional[str] = None
+    top_right_text: Optional[str] = None,
+    field_unit: Optional[str] = None
 ):
     """Export the current frame as a downloadable PNG file"""
     global ds, current_dataset_path
@@ -890,7 +901,8 @@ def export_current_frame(
             FONT_SIZE,
             SCALE_BAR_HEIGHT_FRACTION,
             COLORMAP_FRACTION,
-            SHOW_AXES
+            SHOW_AXES,
+            field_unit
         )
         
         # Get current dataset name
@@ -970,6 +982,7 @@ def export_animation(request: Request):
         timestamp_anno = body.get("timestamp", False)
         top_left_text = body.get("top_left_text")
         top_right_text = body.get("top_right_text")
+        field_unit = body.get("field_unit")
         
         # Validate DATA_DIR
         if not DATA_DIR or not os.path.exists(DATA_DIR):
@@ -1068,7 +1081,8 @@ def export_animation(request: Request):
                         FONT_SIZE,
                         SCALE_BAR_HEIGHT_FRACTION,
                         COLORMAP_FRACTION,
-                        SHOW_AXES
+                        SHOW_AXES,
+                        field_unit
                     )
                     
                     # Save PNG frame
