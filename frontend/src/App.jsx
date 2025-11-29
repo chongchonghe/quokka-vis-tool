@@ -63,6 +63,7 @@ function App() {
   const [alphaMin, setAlphaMin] = useState(0.1);
   const [alphaMax, setAlphaMax] = useState(1.0);
   const [previewMode, setPreviewMode] = useState(true);
+  const [showBoxFrame, setShowBoxFrame] = useState(false);
 
   // Applied states for new features (only for those that need explicit refresh)
   const [appliedPlotType, setAppliedPlotType] = useState('slc');
@@ -81,6 +82,7 @@ function App() {
   const [appliedAlphaMin, setAppliedAlphaMin] = useState(0.1);
   const [appliedAlphaMax, setAppliedAlphaMax] = useState(1.0);
   const [appliedPreviewMode, setAppliedPreviewMode] = useState(true);
+  const [appliedShowBoxFrame, setAppliedShowBoxFrame] = useState(false);
 
   // Export state
   const [isExporting, setIsExporting] = useState(false);
@@ -319,6 +321,7 @@ function App() {
     setAppliedAlphaMin(alphaMin);
     setAppliedAlphaMax(alphaMax);
     setAppliedPreviewMode(previewMode);
+    setAppliedShowBoxFrame(showBoxFrame);
 
     setRefreshTrigger(prev => prev + 1);
   };
@@ -358,6 +361,7 @@ function App() {
       if (appliedPlotType === 'vol') {
         url += `&camera_x=${appliedCameraX}&camera_y=${appliedCameraY}&camera_z=${appliedCameraZ}`;
         url += `&n_layers=${appliedNLayers}&alpha_min=${appliedAlphaMin}&alpha_max=${appliedAlphaMax}`;
+        url += `&show_box_frame=${appliedShowBoxFrame}`;
       }
 
       const response = await fetch(url);
@@ -436,7 +440,8 @@ function App() {
         camera_z: appliedCameraZ,
         n_layers: appliedNLayers,
         alpha_min: appliedAlphaMin,
-        alpha_max: appliedAlphaMax
+        alpha_max: appliedAlphaMax,
+        show_box_frame: appliedShowBoxFrame
       };
 
       const response = await fetch('/api/export/animation', {
@@ -618,6 +623,7 @@ Full details in browser console (F12)`;
           alphaMin={alphaMin} setAlphaMin={setAlphaMin}
           alphaMax={alphaMax} setAlphaMax={setAlphaMax}
           previewMode={previewMode} setPreviewMode={setPreviewMode}
+          showBoxFrame={showBoxFrame} setShowBoxFrame={setShowBoxFrame}
           // Export props
           onExportCurrentFrame={handleExportCurrentFrame}
           onExportAnimation={handleExportAnimation}
@@ -665,6 +671,7 @@ Full details in browser console (F12)`;
           alphaMin={appliedAlphaMin}
           alphaMax={appliedAlphaMax}
           previewMode={appliedPreviewMode}
+          showBoxFrame={appliedShowBoxFrame}
         />
       </div>
     </div>

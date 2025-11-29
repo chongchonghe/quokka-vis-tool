@@ -365,7 +365,8 @@ def _generate_plot_image(
     n_layers: int,
     alpha_min: float,
     alpha_max: float,
-    preview: bool
+    preview: bool,
+    show_box_frame: bool
 ):
     # Ensure global ds matches dataset_path
     global ds
@@ -501,6 +502,46 @@ def _generate_plot_image(
         # But visualize_3d.py explicitly sets position.
         # Let's try to match visualize_3d.py logic for position if possible, 
         # but set_width should handle the field of view.
+        
+        
+        # Add box frame if requested
+        if show_box_frame:
+            # Create line sources to draw the edges of the domain box
+            # Define the 12 edges of a box (4 bottom, 4 top, 4 vertical)
+            left = ds.domain_left_edge
+            right = ds.domain_right_edge
+            
+            # Get the 8 corners of the box
+            corners = [
+                [left[0], left[1], left[2]],  # 0: bottom-left-front
+                [right[0], left[1], left[2]], # 1: bottom-right-front
+                [right[0], right[1], left[2]], # 2: bottom-right-back
+                [left[0], right[1], left[2]], # 3: bottom-left-back
+                [left[0], left[1], right[2]], # 4: top-left-front
+                [right[0], left[1], right[2]], # 5: top-right-front
+                [right[0], right[1], right[2]], # 6: top-right-back
+                [left[0], right[1], right[2]], # 7: top-left-back
+            ]
+            
+            # Define the 12 edges as pairs of corner indices
+            edges = [
+                # Bottom face
+                (0, 1), (1, 2), (2, 3), (3, 0),
+                # Top face
+                (4, 5), (5, 6), (6, 7), (7, 4),
+                # Vertical edges
+                (0, 4), (1, 5), (2, 6), (3, 7)
+            ]
+            
+            # Create a LineSource for each edge
+            for start_idx, end_idx in edges:
+                start = ds.arr(corners[start_idx], 'code_length')
+                end = ds.arr(corners[end_idx], 'code_length')
+                line = yt.visualization.volume_rendering.render_source.LineSource(
+                    start, end, colors=[1.0, 1.0, 1.0, 1.0]  # White, fully opaque
+                )
+                sc.add_source(line)
+        
         
         # Render
         import tempfile
@@ -815,7 +856,8 @@ def get_slice(
         n_layers: int = 5,
         alpha_min: float = 0.1,
         alpha_max: float = 1.0,
-        preview: bool = False
+        preview: bool = False,
+        show_box_frame: bool = False
 ):
     global ds, current_dataset_path
     if ds is None:
@@ -880,7 +922,8 @@ def get_slice(
             n_layers,
             alpha_min,
             alpha_max,
-            preview
+            preview,
+            show_box_frame
         )
         
         return Response(content=image_bytes, media_type="image/png")
@@ -965,7 +1008,15 @@ def export_current_frame(
     timestamp: bool = False,
     top_left_text: Optional[str] = None,
     top_right_text: Optional[str] = None,
-    field_unit: Optional[str] = None
+    field_unit: Optional[str] = None,
+    # 3D params
+    camera_x: float = 1.0,
+    camera_y: float = 1.0,
+    camera_z: float = 1.0,
+    n_layers: int = 5,
+    alpha_min: float = 0.1,
+    alpha_max: float = 1.0,
+    show_box_frame: bool = False
 ):
     """Export the current frame as a downloadable PNG file"""
     global ds, current_dataset_path
@@ -1024,7 +1075,15 @@ def export_current_frame(
             SCALE_BAR_HEIGHT_FRACTION,
             COLORMAP_FRACTION,
             SHOW_AXES,
-            field_unit
+            field_unit,
+            camera_x,
+            camera_y,
+            camera_z,
+            n_layers,
+            alpha_min,
+            alpha_max,
+            False,  # preview mode always False for export
+            show_box_frame
         )
         
         # Get current dataset name
@@ -1105,6 +1164,15 @@ def export_animation(request: Request):
         top_left_text = body.get("top_left_text")
         top_right_text = body.get("top_right_text")
         field_unit = body.get("field_unit")
+        
+        # 3D rendering parameters
+        camera_x = body.get("camera_x", 1.0)
+        camera_y = body.get("camera_y", 1.0)
+        camera_z = body.get("camera_z", 1.0)
+        n_layers = body.get("n_layers", 5)
+        alpha_min = body.get("alpha_min", 0.1)
+        alpha_max = body.get("alpha_max", 1.0)
+        show_box_frame = body.get("show_box_frame", False)
         
         # Validate DATA_DIR
         if not DATA_DIR or not os.path.exists(DATA_DIR):
@@ -1204,7 +1272,15 @@ def export_animation(request: Request):
                         SCALE_BAR_HEIGHT_FRACTION,
                         COLORMAP_FRACTION,
                         SHOW_AXES,
-                        field_unit
+                        field_unit,
+                        camera_x,
+                        camera_y,
+                        camera_z,
+                        n_layers,
+                        alpha_min,
+                        alpha_max,
+                        False,  # preview mode always False for export
+                        show_box_frame
                     )
                     
                     # Save PNG frame

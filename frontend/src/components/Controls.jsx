@@ -42,6 +42,7 @@ function Controls({
   alphaMin, setAlphaMin,
   alphaMax, setAlphaMax,
   previewMode, setPreviewMode,
+  showBoxFrame, setShowBoxFrame,
   // Export props
   onExportCurrentFrame,
   onExportAnimation,
@@ -144,6 +145,18 @@ function Controls({
                 style={{ width: 'auto', marginRight: '0.5rem' }} 
               />
               Preview Mode (Low Res)
+            </label>
+          </div>
+          
+          <div style={{ marginTop: '0.5rem' }}>
+            <label style={{ fontWeight: 'normal', fontSize: '0.9rem', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={showBoxFrame} 
+                onChange={(e) => setShowBoxFrame(e.target.checked)} 
+                style={{ width: 'auto', marginRight: '0.5rem' }} 
+              />
+              Show Box Frame
             </label>
           </div>
         </div>
