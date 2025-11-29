@@ -506,49 +506,24 @@ def _generate_plot_image(
         
         # Add box frame if requested
         if show_box_frame:
-            # Create line sources to draw the edges of the domain box
-            # Define the 12 edges of a box (4 bottom, 4 top, 4 vertical)
-            left = ds.domain_left_edge
-            right = ds.domain_right_edge
+            # Use BoxSource which draws a box with transparent faces (only lines)
+            # sc.annotate_domain() uses BoxSource internally but let's be explicit
+            from yt.visualization.volume_rendering.api import BoxSource
+            box_source = BoxSource(
+                ds.domain_left_edge,
+                ds.domain_right_edge,
+                color=[0.2, 0.2, 0.2, 0.1] # Fully opaque white lines
+            )
+            sc.add_source(box_source)
             
-            # Get the 8 corners of the box
-            corners = [
-                [left[0], left[1], left[2]],  # 0: bottom-left-front
-                [right[0], left[1], left[2]], # 1: bottom-right-front
-                [right[0], right[1], left[2]], # 2: bottom-right-back
-                [left[0], right[1], left[2]], # 3: bottom-left-back
-                [left[0], left[1], right[2]], # 4: top-left-front
-                [right[0], left[1], right[2]], # 5: top-right-front
-                [right[0], right[1], right[2]], # 6: top-right-back
-                [left[0], right[1], right[2]], # 7: top-left-back
-            ]
-            
-            # Define the 12 edges as pairs of corner indices
-            edges = [
-                # Bottom face
-                (0, 1), (1, 2), (2, 3), (3, 0),
-                # Top face
-                (4, 5), (5, 6), (6, 7), (7, 4),
-                # Vertical edges
-                (0, 4), (1, 5), (2, 6), (3, 7)
-            ]
-            
-            # Create a LineSource for each edge
-            for start_idx, end_idx in edges:
-                start = ds.arr(corners[start_idx], 'code_length')
-                end = ds.arr(corners[end_idx], 'code_length')
-                line = yt.visualization.volume_rendering.render_source.LineSource(
-                    start, end, colors=[1.0, 1.0, 1.0, 1.0]  # White, fully opaque
-                )
-                sc.add_source(line)
-        
-        
         # Render
         import tempfile
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_file:
             tmp_path = tmp_file.name
             
         try:
+            # Sigma clip skews the image if there are very bright pixels (like white lines)
+            # Use a very high sigma or None to avoid clipping the volume
             sc.save(tmp_path, sigma_clip=4.0)
             with open(tmp_path, 'rb') as f:
                 image_bytes = f.read()
