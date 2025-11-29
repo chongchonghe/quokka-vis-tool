@@ -419,15 +419,21 @@ def _generate_plot_image(
         source = sc[0]
         
         # Set up transfer function
-        bounds = ds.all_data().quantities.extrema(field_tuple)
+        data_bounds = ds.all_data().quantities.extrema(field_tuple)
+        
+        # Use provided vmin/vmax or fall back to data extrema
+        t_min = float(vmin) if vmin is not None else float(data_bounds[0])
+        t_max = float(vmax) if vmax is not None else float(data_bounds[1])
+        bounds = [t_min, t_max]
         
         if log_scale:
-            real_bounds = np.log10(bounds)
-            # Heuristic: if range is too large or small, adjust? 
-            # For now, just ensure min is not too small relative to max if it's density
-            # visualize_3d.py uses: real_bounds[0] = real_bounds[1] - 8
-            if real_bounds[1] - real_bounds[0] > 8:
-                real_bounds[0] = real_bounds[1] - 8
+            real_bounds = [np.log10(t_min), np.log10(t_max)]
+            # Heuristic: if range is too large, adjust lower bound
+            # Only apply if user didn't specify vmin
+            if vmin is None:
+                # visualize_3d.py uses: real_bounds[0] = real_bounds[1] - 8
+                if real_bounds[1] - real_bounds[0] > 8:
+                    real_bounds[0] = real_bounds[1] - 8
         else:
             real_bounds = bounds
             
