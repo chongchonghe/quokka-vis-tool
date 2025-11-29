@@ -428,12 +428,6 @@ def _generate_plot_image(
         
         if log_scale:
             real_bounds = [np.log10(t_min), np.log10(t_max)]
-            # Heuristic: if range is too large, adjust lower bound
-            # Only apply if user didn't specify vmin
-            if vmin is None:
-                # visualize_3d.py uses: real_bounds[0] = real_bounds[1] - 8
-                if real_bounds[1] - real_bounds[0] > 8:
-                    real_bounds[0] = real_bounds[1] - 8
         else:
             real_bounds = bounds
             
