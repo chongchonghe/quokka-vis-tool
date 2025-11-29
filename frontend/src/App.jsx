@@ -62,6 +62,7 @@ function App() {
   const [nLayers, setNLayers] = useState(5);
   const [alphaMin, setAlphaMin] = useState(0.1);
   const [alphaMax, setAlphaMax] = useState(1.0);
+  const [greyOpacity, setGreyOpacity] = useState(false);
   const [previewMode, setPreviewMode] = useState(true);
   const [showBoxFrame, setShowBoxFrame] = useState(false);
 
@@ -81,6 +82,7 @@ function App() {
   const [appliedNLayers, setAppliedNLayers] = useState(5);
   const [appliedAlphaMin, setAppliedAlphaMin] = useState(0.1);
   const [appliedAlphaMax, setAppliedAlphaMax] = useState(1.0);
+  const [appliedGreyOpacity, setAppliedGreyOpacity] = useState(false);
   const [appliedPreviewMode, setAppliedPreviewMode] = useState(true);
   const [appliedShowBoxFrame, setAppliedShowBoxFrame] = useState(false);
 
@@ -320,6 +322,7 @@ function App() {
     setAppliedNLayers(nLayers);
     setAppliedAlphaMin(alphaMin);
     setAppliedAlphaMax(alphaMax);
+    setAppliedGreyOpacity(greyOpacity);
     setAppliedPreviewMode(previewMode);
     setAppliedShowBoxFrame(showBoxFrame);
 
@@ -361,6 +364,7 @@ function App() {
       if (appliedPlotType === 'vol') {
         url += `&camera_x=${appliedCameraX}&camera_y=${appliedCameraY}&camera_z=${appliedCameraZ}`;
         url += `&n_layers=${appliedNLayers}&alpha_min=${appliedAlphaMin}&alpha_max=${appliedAlphaMax}`;
+        url += `&grey_opacity=${appliedGreyOpacity}`;
         url += `&show_box_frame=${appliedShowBoxFrame}`;
       }
 
@@ -441,6 +445,7 @@ function App() {
         n_layers: appliedNLayers,
         alpha_min: appliedAlphaMin,
         alpha_max: appliedAlphaMax,
+        grey_opacity: appliedGreyOpacity,
         show_box_frame: appliedShowBoxFrame
       };
 
@@ -622,6 +627,7 @@ Full details in browser console (F12)`;
           nLayers={nLayers} setNLayers={setNLayers}
           alphaMin={alphaMin} setAlphaMin={setAlphaMin}
           alphaMax={alphaMax} setAlphaMax={setAlphaMax}
+          greyOpacity={greyOpacity} setGreyOpacity={setGreyOpacity}
           previewMode={previewMode} setPreviewMode={setPreviewMode}
           showBoxFrame={showBoxFrame} setShowBoxFrame={setShowBoxFrame}
           // Export props
@@ -670,6 +676,7 @@ Full details in browser console (F12)`;
           nLayers={appliedNLayers}
           alphaMin={appliedAlphaMin}
           alphaMax={appliedAlphaMax}
+          greyOpacity={appliedGreyOpacity}
           previewMode={appliedPreviewMode}
           showBoxFrame={appliedShowBoxFrame}
         />

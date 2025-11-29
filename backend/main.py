@@ -365,6 +365,7 @@ def _generate_plot_image(
     n_layers: int,
     alpha_min: float,
     alpha_max: float,
+    grey_opacity: bool,
     preview: bool,
     show_box_frame: bool
 ):
@@ -430,7 +431,7 @@ def _generate_plot_image(
         else:
             real_bounds = bounds
             
-        tf = yt.ColorTransferFunction(real_bounds)
+        tf = yt.ColorTransferFunction(real_bounds, grey_opacity=grey_opacity)
         tf.add_layers(n_layers, w=0.02, colormap=cmap, alpha=np.logspace(np.log10(alpha_min), np.log10(alpha_max), n_layers))
         
         source.tfh.tf = tf
@@ -524,7 +525,7 @@ def _generate_plot_image(
         try:
             # Sigma clip skews the image if there are very bright pixels (like white lines)
             # Use a very high sigma or None to avoid clipping the volume
-            sc.save(tmp_path, sigma_clip=4.0)
+            sc.save(tmp_path, sigma_clip=3.5)
             with open(tmp_path, 'rb') as f:
                 image_bytes = f.read()
         finally:
@@ -831,6 +832,7 @@ def get_slice(
         n_layers: int = 5,
         alpha_min: float = 0.1,
         alpha_max: float = 1.0,
+        grey_opacity: bool = False,
         preview: bool = False,
         show_box_frame: bool = False
 ):
@@ -897,6 +899,7 @@ def get_slice(
             n_layers,
             alpha_min,
             alpha_max,
+            grey_opacity,
             preview,
             show_box_frame
         )
@@ -991,6 +994,7 @@ def export_current_frame(
     n_layers: int = 5,
     alpha_min: float = 0.1,
     alpha_max: float = 1.0,
+    grey_opacity: bool = False,
     show_box_frame: bool = False
 ):
     """Export the current frame as a downloadable PNG file"""
@@ -1057,6 +1061,7 @@ def export_current_frame(
             n_layers,
             alpha_min,
             alpha_max,
+            grey_opacity,
             False,  # preview mode always False for export
             show_box_frame
         )
@@ -1147,6 +1152,7 @@ def export_animation(request: Request):
         n_layers = body.get("n_layers", 5)
         alpha_min = body.get("alpha_min", 0.1)
         alpha_max = body.get("alpha_max", 1.0)
+        grey_opacity = body.get("grey_opacity", False)
         show_box_frame = body.get("show_box_frame", False)
         
         # Validate DATA_DIR
@@ -1254,6 +1260,7 @@ def export_animation(request: Request):
                         n_layers,
                         alpha_min,
                         alpha_max,
+                        grey_opacity,
                         False,  # preview mode always False for export
                         show_box_frame
                     )
