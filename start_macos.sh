@@ -1,6 +1,8 @@
 #/Users/cche/git/vis-tool-3d/data/ParticleRadiation!/usr/bin/env bash
 set -euo pipefail
 
+source ~/rc/yt.rc
+
 # Always run from the directory where this script lives
 cd "$(dirname "$0")"
 

@@ -357,7 +357,14 @@ def _generate_plot_image(
     scale_bar_height_fraction: float,
     colormap_fraction: float,
     show_axes: bool,
-    field_unit: Optional[str]
+    field_unit: Optional[str],
+    # 3D rendering params
+    camera_x: float,
+    camera_y: float,
+    camera_z: float,
+    n_layers: int,
+    alpha_min: float,
+    alpha_max: float
 ):
     # Ensure global ds matches dataset_path
     global ds
@@ -393,11 +400,106 @@ def _generate_plot_image(
         slc = yt.SlicePlot(ds, axis, field_tuple, center=ds.domain_center)
     elif kind == "prj":
         slc = yt.ProjectionPlot(ds, axis, field_tuple, weight_field=weight, center=ds.domain_center)
+    elif kind == "vol":
+        # Volume rendering
+        # We handle this separately because it returns a scene, not a plot container like SlicePlot
+        pass
     else:
         raise ValueError(f"Unknown plot kind: {kind}")
     
     # ========================================
-    # Configure plot properties
+    # Volume Rendering Handling
+    # ========================================
+    if kind == "vol":
+        print(f"Creating volume rendering for {field}...")
+        sc = yt.create_scene(ds, field=field_tuple)
+        source = sc[0]
+        
+        # Set up transfer function
+        bounds = ds.all_data().quantities.extrema(field_tuple)
+        
+        if log_scale:
+            real_bounds = np.log10(bounds)
+            # Heuristic: if range is too large or small, adjust? 
+            # For now, just ensure min is not too small relative to max if it's density
+            # visualize_3d.py uses: real_bounds[0] = real_bounds[1] - 8
+            if real_bounds[1] - real_bounds[0] > 8:
+                real_bounds[0] = real_bounds[1] - 8
+        else:
+            real_bounds = bounds
+            
+        tf = yt.ColorTransferFunction(real_bounds)
+        tf.add_layers(n_layers, w=0.02, colormap=cmap, alpha=np.logspace(np.log10(alpha_min), np.log10(alpha_max), n_layers))
+        
+        source.tfh.tf = tf
+        source.tfh.bounds = bounds
+        source.tfh.set_log(log_scale)
+        
+        # Camera setup
+        cam = sc.camera
+        # Resolution: use a fixed reasonable size or base on short_size * dpi?
+        # visualize_3d uses (1024, 1024) as standard.
+        # Let's use dpi * short_size roughly
+        res_px = int(short_size * dpi)
+        cam.resolution = (res_px, res_px)
+        
+        # Camera direction
+        view_dir = np.array([camera_x, camera_y, camera_z], dtype=float)
+        norm = np.linalg.norm(view_dir)
+        if norm == 0:
+            view_dir = np.array([1.0, 1.0, 1.0])
+        else:
+            view_dir = view_dir / norm
+            
+        # North vector
+        if abs(view_dir[2]) > 0.9:
+            north = np.array([0, 1, 0])
+        else:
+            north = np.array([0, 0, 1])
+            
+        # Width
+        # Default width is 1.0 * domain_width if not specified
+        width_factor = 1.0
+        if width_value is not None and width_unit is not None:
+             # Convert width to code units relative to domain width?
+             # yt camera set_width takes (value, unit)
+             cam.set_width((width_value, width_unit))
+        else:
+             cam.set_width(1.0 * ds.domain_width)
+             
+        # Position
+        # We need to calculate position based on width and focus
+        # visualize_3d.py: cam_pos = ds.domain_center + 1.5 * width * ds.domain_width * view_dir
+        # But cam.set_width sets the view width. The distance depends on the width.
+        # If we use switch_orientation, it handles looking at focus.
+        
+        cam.set_focus(ds.domain_center)
+        cam.switch_orientation(normal_vector=view_dir, north_vector=north)
+        
+        # Adjust position distance to fit the width?
+        # switch_orientation keeps the current distance or sets a default?
+        # Actually, let's just trust switch_orientation and set_width.
+        # But visualize_3d.py explicitly sets position.
+        # Let's try to match visualize_3d.py logic for position if possible, 
+        # but set_width should handle the field of view.
+        
+        # Render
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_file:
+            tmp_path = tmp_file.name
+            
+        try:
+            sc.save(tmp_path, sigma_clip=4.0)
+            with open(tmp_path, 'rb') as f:
+                image_bytes = f.read()
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+                
+        return image_bytes
+
+    # ========================================
+    # Configure plot properties (Slice/Projection)
     # ========================================
     # Set units if specified (for custom unit display)
     if field_unit is not None and field_unit != "":
@@ -685,8 +787,15 @@ def get_slice(
     grids: bool = False,
     timestamp: bool = False,
     top_left_text: Optional[str] = None,
-    top_right_text: Optional[str] = None,
-    field_unit: Optional[str] = None
+        top_right_text: Optional[str] = None,
+        field_unit: Optional[str] = None,
+        # 3D params
+        camera_x: float = 1.0,
+        camera_y: float = 1.0,
+        camera_z: float = 1.0,
+        n_layers: int = 5,
+        alpha_min: float = 0.1,
+        alpha_max: float = 1.0
 ):
     global ds, current_dataset_path
     if ds is None:
@@ -744,7 +853,13 @@ def get_slice(
             SCALE_BAR_HEIGHT_FRACTION,
             COLORMAP_FRACTION,
             SHOW_AXES,
-            field_unit
+            field_unit,
+            camera_x,
+            camera_y,
+            camera_z,
+            n_layers,
+            alpha_min,
+            alpha_max
         )
         
         return Response(content=image_bytes, media_type="image/png")

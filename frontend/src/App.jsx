@@ -55,6 +55,14 @@ function App() {
   const [topLeftText, setTopLeftText] = useState('');
   const [topRightText, setTopRightText] = useState('');
 
+  // 3D Rendering state
+  const [cameraX, setCameraX] = useState(1.0);
+  const [cameraY, setCameraY] = useState(1.0);
+  const [cameraZ, setCameraZ] = useState(1.0);
+  const [nLayers, setNLayers] = useState(5);
+  const [alphaMin, setAlphaMin] = useState(0.1);
+  const [alphaMax, setAlphaMax] = useState(1.0);
+
   // Applied states for new features (only for those that need explicit refresh)
   const [appliedPlotType, setAppliedPlotType] = useState('slc');
   const [appliedWeightField, setAppliedWeightField] = useState('None');
@@ -63,6 +71,14 @@ function App() {
   const [appliedFieldUnit, setAppliedFieldUnit] = useState('');
   const [appliedTopLeftText, setAppliedTopLeftText] = useState('');
   const [appliedTopRightText, setAppliedTopRightText] = useState('');
+  
+  // Applied 3D states
+  const [appliedCameraX, setAppliedCameraX] = useState(1.0);
+  const [appliedCameraY, setAppliedCameraY] = useState(1.0);
+  const [appliedCameraZ, setAppliedCameraZ] = useState(1.0);
+  const [appliedNLayers, setAppliedNLayers] = useState(5);
+  const [appliedAlphaMin, setAppliedAlphaMin] = useState(0.1);
+  const [appliedAlphaMax, setAppliedAlphaMax] = useState(1.0);
 
   // Export state
   const [isExporting, setIsExporting] = useState(false);
@@ -292,6 +308,14 @@ function App() {
     setAppliedFieldUnit(fieldUnit);
     setAppliedTopLeftText(topLeftText);
     setAppliedTopRightText(topRightText);
+    
+    // Apply 3D settings
+    setAppliedCameraX(cameraX);
+    setAppliedCameraY(cameraY);
+    setAppliedCameraZ(cameraZ);
+    setAppliedNLayers(nLayers);
+    setAppliedAlphaMin(alphaMin);
+    setAppliedAlphaMax(alphaMax);
 
     setRefreshTrigger(prev => prev + 1);
   };
@@ -326,6 +350,12 @@ function App() {
       if (timestamp) url += `&timestamp=true`;
       if (appliedTopLeftText) url += `&top_left_text=${encodeURIComponent(appliedTopLeftText)}`;
       if (appliedTopRightText) url += `&top_right_text=${encodeURIComponent(appliedTopRightText)}`;
+      
+      // 3D params
+      if (appliedPlotType === 'vol') {
+        url += `&camera_x=${appliedCameraX}&camera_y=${appliedCameraY}&camera_z=${appliedCameraZ}`;
+        url += `&n_layers=${appliedNLayers}&alpha_min=${appliedAlphaMin}&alpha_max=${appliedAlphaMax}`;
+      }
 
       const response = await fetch(url);
       if (!response.ok) {
@@ -396,7 +426,14 @@ function App() {
         grids: grids,
         timestamp: timestamp,
         top_left_text: appliedTopLeftText || null,
-        top_right_text: appliedTopRightText || null
+        top_right_text: appliedTopRightText || null,
+        // 3D params
+        camera_x: appliedCameraX,
+        camera_y: appliedCameraY,
+        camera_z: appliedCameraZ,
+        n_layers: appliedNLayers,
+        alpha_min: appliedAlphaMin,
+        alpha_max: appliedAlphaMax
       };
 
       const response = await fetch('/api/export/animation', {
@@ -570,6 +607,13 @@ Full details in browser console (F12)`;
           timestamp={timestamp} setTimestamp={setTimestamp}
           topLeftText={topLeftText} setTopLeftText={setTopLeftText}
           topRightText={topRightText} setTopRightText={setTopRightText}
+          // 3D props
+          cameraX={cameraX} setCameraX={setCameraX}
+          cameraY={cameraY} setCameraY={setCameraY}
+          cameraZ={cameraZ} setCameraZ={setCameraZ}
+          nLayers={nLayers} setNLayers={setNLayers}
+          alphaMin={alphaMin} setAlphaMin={setAlphaMin}
+          alphaMax={alphaMax} setAlphaMax={setAlphaMax}
           // Export props
           onExportCurrentFrame={handleExportCurrentFrame}
           onExportAnimation={handleExportAnimation}
@@ -609,6 +653,13 @@ Full details in browser console (F12)`;
           timestamp={timestamp}
           topLeftText={appliedTopLeftText}
           topRightText={appliedTopRightText}
+          // 3D props
+          cameraX={appliedCameraX}
+          cameraY={appliedCameraY}
+          cameraZ={appliedCameraZ}
+          nLayers={appliedNLayers}
+          alphaMin={appliedAlphaMin}
+          alphaMax={appliedAlphaMax}
         />
       </div>
     </div>

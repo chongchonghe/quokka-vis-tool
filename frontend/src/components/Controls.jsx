@@ -34,6 +34,13 @@ function Controls({
   timestamp, setTimestamp,
   topLeftText, setTopLeftText,
   topRightText, setTopRightText,
+  // 3D props
+  cameraX, setCameraX,
+  cameraY, setCameraY,
+  cameraZ, setCameraZ,
+  nLayers, setNLayers,
+  alphaMin, setAlphaMin,
+  alphaMax, setAlphaMax,
   // Export props
   onExportCurrentFrame,
   onExportAnimation,
@@ -87,8 +94,47 @@ function Controls({
         <select value={plotType} onChange={(e) => setPlotType(e.target.value)}>
           <option value="slc">Slice</option>
           <option value="prj">Projection</option>
+          <option value="vol">Volume Rendering</option>
         </select>
       </div>
+
+      {plotType === 'vol' && (
+        <div className="control-group">
+          <label style={{marginBottom: '0.5rem', display: 'block', fontWeight: 'bold', fontSize: '0.9rem'}}>3D Camera Direction:</label>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{fontSize: '0.8rem', display: 'block'}}>X</label>
+              <input type="number" value={cameraX} onChange={(e) => setCameraX(Number(e.target.value))} step="0.1" style={{width: '100%'}} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{fontSize: '0.8rem', display: 'block'}}>Y</label>
+              <input type="number" value={cameraY} onChange={(e) => setCameraY(Number(e.target.value))} step="0.1" style={{width: '100%'}} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{fontSize: '0.8rem', display: 'block'}}>Z</label>
+              <input type="number" value={cameraZ} onChange={(e) => setCameraZ(Number(e.target.value))} step="0.1" style={{width: '100%'}} />
+            </div>
+          </div>
+          
+          <label style={{marginTop: '0.5rem', marginBottom: '0.5rem', display: 'block', fontWeight: 'bold', fontSize: '0.9rem'}}>Transfer Function:</label>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{fontSize: '0.8rem', display: 'block'}}>Layers</label>
+              <input type="number" value={nLayers} onChange={(e) => setNLayers(Number(e.target.value))} min="1" max="20" style={{width: '100%'}} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{fontSize: '0.8rem', display: 'block'}}>Min Alpha</label>
+              <input type="number" value={alphaMin} onChange={(e) => setAlphaMin(Number(e.target.value))} step="0.1" min="0" max="1" style={{width: '100%'}} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{fontSize: '0.8rem', display: 'block'}}>Max Alpha</label>
+              <input type="number" value={alphaMax} onChange={(e) => setAlphaMax(Number(e.target.value))} step="0.1" min="0" max="1" style={{width: '100%'}} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {plotType === 'prj' && (
         <div className="control-group compact">
