@@ -63,6 +63,9 @@ function Controls({
   };
   return (
     <div className="controls-container">
+
+      <button onClick={onRefresh} style={{ marginBottom: '0.5rem' }}>Refresh</button>
+
       <div className="control-group compact">
         <label>Dataset:</label>
         <select value={currentDataset} onChange={(e) => setDataset(e.target.value)}>
@@ -454,8 +457,6 @@ function Controls({
         />
       </div>
       
-      <button onClick={onRefresh}>Refresh</button>
-
       <div className="control-group" style={{ marginTop: '0.5rem' }}>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <input type="text" value={topLeftText} onChange={(e) => setTopLeftText(e.target.value)} placeholder="Top Left Text" />
