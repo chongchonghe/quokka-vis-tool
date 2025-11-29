@@ -364,7 +364,8 @@ def _generate_plot_image(
     camera_z: float,
     n_layers: int,
     alpha_min: float,
-    alpha_max: float
+    alpha_max: float,
+    preview: bool
 ):
     # Ensure global ds matches dataset_path
     global ds
@@ -440,7 +441,10 @@ def _generate_plot_image(
         # Resolution: use a fixed reasonable size or base on short_size * dpi?
         # visualize_3d uses (1024, 1024) as standard.
         # Let's use dpi * short_size roughly
-        res_px = int(short_size * dpi)
+        if preview:
+            res_px = 512
+        else:
+            res_px = int(short_size * dpi)
         cam.resolution = (res_px, res_px)
         
         # Camera direction
@@ -465,7 +469,22 @@ def _generate_plot_image(
              # yt camera set_width takes (value, unit)
              cam.set_width((width_value, width_unit))
         else:
-             cam.set_width(1.0 * ds.domain_width)
+             # Smart width logic:
+             # 1. Find the longest side
+             domain_width = ds.domain_width
+             max_dim_idx = np.argmax(domain_width)
+             max_width = domain_width[max_dim_idx]
+             
+             # 2. Check if looking along the longest side (small angle)
+             # view_dir is normalized. Check component along max_dim_idx.
+             # If abs(view_dir[max_dim_idx]) is close to 1, we are looking along that axis.
+             if abs(view_dir[max_dim_idx]) > 0.9:
+                 # Looking along the longest side. Use the shortest side.
+                 min_width = np.min(domain_width)
+                 cam.set_width(min_width)
+             else:
+                 # Not looking along the longest side. Use the longest side.
+                 cam.set_width(max_width)
              
         # Position
         # We need to calculate position based on width and focus
@@ -795,7 +814,8 @@ def get_slice(
         camera_z: float = 1.0,
         n_layers: int = 5,
         alpha_min: float = 0.1,
-        alpha_max: float = 1.0
+        alpha_max: float = 1.0,
+        preview: bool = False
 ):
     global ds, current_dataset_path
     if ds is None:
@@ -859,7 +879,8 @@ def get_slice(
             camera_z,
             n_layers,
             alpha_min,
-            alpha_max
+            alpha_max,
+            preview
         )
         
         return Response(content=image_bytes, media_type="image/png")

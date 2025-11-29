@@ -41,6 +41,7 @@ function Controls({
   nLayers, setNLayers,
   alphaMin, setAlphaMin,
   alphaMax, setAlphaMax,
+  previewMode, setPreviewMode,
   // Export props
   onExportCurrentFrame,
   onExportAnimation,
@@ -132,6 +133,18 @@ function Controls({
               <label style={{fontSize: '0.8rem', display: 'block'}}>Max Alpha</label>
               <input type="number" value={alphaMax} onChange={(e) => setAlphaMax(Number(e.target.value))} step="0.1" min="0" max="1" style={{width: '100%'}} />
             </div>
+          </div>
+          
+          <div style={{ marginTop: '0.5rem' }}>
+            <label style={{ fontWeight: 'normal', fontSize: '0.9rem', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={previewMode} 
+                onChange={(e) => setPreviewMode(e.target.checked)} 
+                style={{ width: 'auto', marginRight: '0.5rem' }} 
+              />
+              Preview Mode (Low Res)
+            </label>
           </div>
         </div>
       )}

@@ -8,7 +8,7 @@ function Viewer({
   // New props
   plotType, weightField, widthValue, widthUnit, fieldUnit, particles, particleSize, particleColor, grids, timestamp, topLeftText, topRightText,
   // 3D props
-  cameraX, cameraY, cameraZ, nLayers, alphaMin, alphaMax
+  cameraX, cameraY, cameraZ, nLayers, alphaMin, alphaMax, previewMode
 }) {
   const [imageUrl, setImageUrl] = useState(null);
   const [error, setError] = useState(null);
@@ -22,7 +22,7 @@ function Viewer({
     showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, cmap,
     showScaleBar, scaleBarSize, scaleBarUnit, dpi,
     plotType, weightField, widthValue, widthUnit, fieldUnit, particles, particleSize, particleColor, grids, timestamp, topLeftText, topRightText,
-    cameraX, cameraY, cameraZ, nLayers, alphaMin, alphaMax
+    cameraX, cameraY, cameraZ, nLayers, alphaMin, alphaMax, previewMode
   ]);
 
   const fetchImage = async () => {
@@ -70,6 +70,7 @@ function Viewer({
       if (plotType === 'vol') {
         url += `&camera_x=${cameraX}&camera_y=${cameraY}&camera_z=${cameraZ}`;
         url += `&n_layers=${nLayers}&alpha_min=${alphaMin}&alpha_max=${alphaMax}`;
+        if (previewMode) url += `&preview=true`;
       }
       
       console.log('DEBUG Viewer: Final URL:', url);
