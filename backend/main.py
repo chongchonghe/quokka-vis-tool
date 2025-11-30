@@ -449,7 +449,8 @@ def _generate_plot_image(
         if preview:
             res_px = 512
         else:
-            res_px = int(short_size * dpi)
+            vol_res_scale_up = 2.0
+            res_px = int(short_size * dpi * vol_res_scale_up)
         cam.resolution = (res_px, res_px)
         
         # Camera direction
