@@ -432,7 +432,10 @@ def _generate_plot_image(
             real_bounds = bounds
             
         tf = yt.ColorTransferFunction(real_bounds, grey_opacity=grey_opacity)
-        tf.add_layers(n_layers, w=0.02, colormap=cmap, alpha=np.logspace(np.log10(alpha_min), np.log10(alpha_max), n_layers))
+        # More control 
+        # tf.add_layers(n_layers, w=0.02, colormap=cmap, alpha=np.logspace(np.log10(alpha_min), np.log10(alpha_max), n_layers))
+        # Simple default
+        tf.add_layers(n_layers, colormap=cmap)
         
         source.tfh.tf = tf
         source.tfh.bounds = bounds
