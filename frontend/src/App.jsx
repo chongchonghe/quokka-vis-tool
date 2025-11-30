@@ -521,7 +521,8 @@ function App() {
                 fontFamily: 'monospace',
                 fontSize: '0.85rem',
                 border: '1px solid #ccc',
-                borderRadius: '4px'
+                borderRadius: '4px',
+                boxSizing: 'border-box'
               }}
             />
             <div style={{ display: 'flex', gap: '0.5rem' }}>
