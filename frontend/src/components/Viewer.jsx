@@ -8,7 +8,7 @@ function Viewer({
   // New props
   plotType, weightField, widthValue, widthUnit, fieldUnit, particles, particleSize, particleColor, grids, timestamp, topLeftText, topRightText,
   // 3D props
-  cameraX, cameraY, cameraZ, nLayers, alphaMin, alphaMax, greyOpacity, previewMode, showBoxFrame
+  cameraTheta, cameraPhi, nLayers, alphaMin, alphaMax, greyOpacity, previewMode, showBoxFrame
 }) {
   const [imageUrl, setImageUrl] = useState(null);
   const [error, setError] = useState(null);
@@ -22,7 +22,7 @@ function Viewer({
     showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, cmap,
     showScaleBar, scaleBarSize, scaleBarUnit, dpi,
     plotType, weightField, widthValue, widthUnit, fieldUnit, particles, particleSize, particleColor, grids, timestamp, topLeftText, topRightText,
-    cameraX, cameraY, cameraZ, nLayers, alphaMin, alphaMax, greyOpacity, previewMode, showBoxFrame
+    cameraTheta, cameraPhi, nLayers, alphaMin, alphaMax, greyOpacity, previewMode, showBoxFrame
   ]);
 
   const fetchImage = async () => {
@@ -68,7 +68,7 @@ function Viewer({
       
       // 3D params
       if (plotType === 'vol') {
-        url += `&camera_x=${cameraX}&camera_y=${cameraY}&camera_z=${cameraZ}`;
+        url += `&camera_theta=${cameraTheta}&camera_phi=${cameraPhi}`;
         url += `&n_layers=${nLayers}&alpha_min=${alphaMin}&alpha_max=${alphaMax}`;
         if (greyOpacity) url += `&grey_opacity=true`;
         if (previewMode) url += `&preview=true`;

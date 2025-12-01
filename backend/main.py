@@ -359,9 +359,8 @@ def _generate_plot_image(
     show_axes: bool,
     field_unit: Optional[str],
     # 3D rendering params
-    camera_x: float,
-    camera_y: float,
-    camera_z: float,
+    camera_theta: float,
+    camera_phi: float,
     n_layers: int,
     alpha_min: float,
     alpha_max: float,
@@ -454,10 +453,20 @@ def _generate_plot_image(
         cam.resolution = (res_px, res_px)
         
         # Camera direction
-        view_dir = np.array([camera_x, camera_y, camera_z], dtype=float)
+        # Convert spherical (theta, phi) to cartesian (x, y, z)
+        # Theta: Polar angle (0-180)
+        # Phi: Azimuthal angle (0-360)
+        theta_rad = np.radians(camera_theta)
+        phi_rad = np.radians(camera_phi)
+        
+        cx = np.sin(theta_rad) * np.cos(phi_rad)
+        cy = np.sin(theta_rad) * np.sin(phi_rad)
+        cz = np.cos(theta_rad)
+        
+        view_dir = np.array([cx, cy, cz], dtype=float)
         norm = np.linalg.norm(view_dir)
         if norm == 0:
-            view_dir = np.array([1.0, 1.0, 1.0])
+            view_dir = np.array([1.0, 0.0, 0.0])
         else:
             view_dir = view_dir / norm
             
@@ -830,9 +839,8 @@ def get_slice(
         top_right_text: Optional[str] = None,
         field_unit: Optional[str] = None,
         # 3D params
-        camera_x: float = 1.0,
-        camera_y: float = 1.0,
-        camera_z: float = 1.0,
+        camera_theta: float = 0.0,
+        camera_phi: float = 0.0,
         n_layers: int = 5,
         alpha_min: float = 0.1,
         alpha_max: float = 1.0,
@@ -897,9 +905,8 @@ def get_slice(
             COLORMAP_FRACTION,
             SHOW_AXES,
             field_unit,
-            camera_x,
-            camera_y,
-            camera_z,
+            camera_theta,
+            camera_phi,
             n_layers,
             alpha_min,
             alpha_max,
@@ -992,9 +999,8 @@ def export_current_frame(
     top_right_text: Optional[str] = None,
     field_unit: Optional[str] = None,
     # 3D params
-    camera_x: float = 1.0,
-    camera_y: float = 1.0,
-    camera_z: float = 1.0,
+    camera_theta: float = 0.0,
+    camera_phi: float = 0.0,
     n_layers: int = 5,
     alpha_min: float = 0.1,
     alpha_max: float = 1.0,
@@ -1059,9 +1065,8 @@ def export_current_frame(
             COLORMAP_FRACTION,
             SHOW_AXES,
             field_unit,
-            camera_x,
-            camera_y,
-            camera_z,
+            camera_theta,
+            camera_phi,
             n_layers,
             alpha_min,
             alpha_max,
@@ -1150,9 +1155,8 @@ def export_animation(request: Request):
         field_unit = body.get("field_unit")
         
         # 3D rendering parameters
-        camera_x = body.get("camera_x", 1.0)
-        camera_y = body.get("camera_y", 1.0)
-        camera_z = body.get("camera_z", 1.0)
+        camera_theta = body.get("camera_theta", 0.0)
+        camera_phi = body.get("camera_phi", 0.0)
         n_layers = body.get("n_layers", 5)
         alpha_min = body.get("alpha_min", 0.1)
         alpha_max = body.get("alpha_max", 1.0)
@@ -1258,9 +1262,8 @@ def export_animation(request: Request):
                         COLORMAP_FRACTION,
                         SHOW_AXES,
                         field_unit,
-                        camera_x,
-                        camera_y,
-                        camera_z,
+                        camera_theta,
+                        camera_phi,
                         n_layers,
                         alpha_min,
                         alpha_max,

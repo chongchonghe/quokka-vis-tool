@@ -56,9 +56,8 @@ function App() {
   const [topRightText, setTopRightText] = useState('');
 
   // 3D Rendering state
-  const [cameraX, setCameraX] = useState(1.0);
-  const [cameraY, setCameraY] = useState(1.0);
-  const [cameraZ, setCameraZ] = useState(1.0);
+  const [cameraTheta, setCameraTheta] = useState(0.0);
+  const [cameraPhi, setCameraPhi] = useState(0.0);
   const [nLayers, setNLayers] = useState(5);
   const [alphaMin, setAlphaMin] = useState(0.1);
   const [alphaMax, setAlphaMax] = useState(1.0);
@@ -76,9 +75,8 @@ function App() {
   const [appliedTopRightText, setAppliedTopRightText] = useState('');
   
   // Applied 3D states
-  const [appliedCameraX, setAppliedCameraX] = useState(1.0);
-  const [appliedCameraY, setAppliedCameraY] = useState(1.0);
-  const [appliedCameraZ, setAppliedCameraZ] = useState(1.0);
+  const [appliedCameraTheta, setAppliedCameraTheta] = useState(0.0);
+  const [appliedCameraPhi, setAppliedCameraPhi] = useState(0.0);
   const [appliedNLayers, setAppliedNLayers] = useState(5);
   const [appliedAlphaMin, setAppliedAlphaMin] = useState(0.1);
   const [appliedAlphaMax, setAppliedAlphaMax] = useState(1.0);
@@ -316,9 +314,8 @@ function App() {
     setAppliedTopRightText(topRightText);
     
     // Apply 3D settings
-    setAppliedCameraX(cameraX);
-    setAppliedCameraY(cameraY);
-    setAppliedCameraZ(cameraZ);
+    setAppliedCameraTheta(cameraTheta);
+    setAppliedCameraPhi(cameraPhi);
     setAppliedNLayers(nLayers);
     setAppliedAlphaMin(alphaMin);
     setAppliedAlphaMax(alphaMax);
@@ -362,7 +359,7 @@ function App() {
       
       // 3D params
       if (appliedPlotType === 'vol') {
-        url += `&camera_x=${appliedCameraX}&camera_y=${appliedCameraY}&camera_z=${appliedCameraZ}`;
+        url += `&camera_theta=${appliedCameraTheta}&camera_phi=${appliedCameraPhi}`;
         url += `&n_layers=${appliedNLayers}&alpha_min=${appliedAlphaMin}&alpha_max=${appliedAlphaMax}`;
         url += `&grey_opacity=${appliedGreyOpacity}`;
         url += `&show_box_frame=${appliedShowBoxFrame}`;
@@ -439,9 +436,8 @@ function App() {
         top_left_text: appliedTopLeftText || null,
         top_right_text: appliedTopRightText || null,
         // 3D params
-        camera_x: appliedCameraX,
-        camera_y: appliedCameraY,
-        camera_z: appliedCameraZ,
+        camera_theta: appliedCameraTheta,
+        camera_phi: appliedCameraPhi,
         n_layers: appliedNLayers,
         alpha_min: appliedAlphaMin,
         alpha_max: appliedAlphaMax,
@@ -622,9 +618,8 @@ Full details in browser console (F12)`;
           topLeftText={topLeftText} setTopLeftText={setTopLeftText}
           topRightText={topRightText} setTopRightText={setTopRightText}
           // 3D props
-          cameraX={cameraX} setCameraX={setCameraX}
-          cameraY={cameraY} setCameraY={setCameraY}
-          cameraZ={cameraZ} setCameraZ={setCameraZ}
+          cameraTheta={cameraTheta} setCameraTheta={setCameraTheta}
+          cameraPhi={cameraPhi} setCameraPhi={setCameraPhi}
           nLayers={nLayers} setNLayers={setNLayers}
           alphaMin={alphaMin} setAlphaMin={setAlphaMin}
           alphaMax={alphaMax} setAlphaMax={setAlphaMax}
@@ -671,9 +666,8 @@ Full details in browser console (F12)`;
           topLeftText={appliedTopLeftText}
           topRightText={appliedTopRightText}
           // 3D props
-          cameraX={appliedCameraX}
-          cameraY={appliedCameraY}
-          cameraZ={appliedCameraZ}
+          cameraTheta={appliedCameraTheta}
+          cameraPhi={appliedCameraPhi}
           nLayers={appliedNLayers}
           alphaMin={appliedAlphaMin}
           alphaMax={appliedAlphaMax}

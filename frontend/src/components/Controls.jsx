@@ -35,9 +35,8 @@ function Controls({
   topLeftText, setTopLeftText,
   topRightText, setTopRightText,
   // 3D props
-  cameraX, setCameraX,
-  cameraY, setCameraY,
-  cameraZ, setCameraZ,
+  cameraTheta, setCameraTheta,
+  cameraPhi, setCameraPhi,
   nLayers, setNLayers,
   alphaMin, setAlphaMin,
   alphaMax, setAlphaMax,
@@ -109,16 +108,12 @@ function Controls({
           <label style={{marginBottom: '0.5rem', display: 'block', fontWeight: 'bold', fontSize: '0.9rem'}}>3D Camera Direction:</label>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <div style={{ flex: 1 }}>
-              <label style={{fontSize: '0.8rem', display: 'block'}}>X</label>
-              <input type="number" value={cameraX} onChange={(e) => setCameraX(Number(e.target.value))} step="0.1" style={{width: '100%'}} />
+              <label style={{fontSize: '0.8rem', display: 'block'}}>Theta (Polar)</label>
+              <input type="number" value={cameraTheta} onChange={(e) => setCameraTheta(Number(e.target.value))} min="0" max="180" step="5" style={{width: '100%'}} />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{fontSize: '0.8rem', display: 'block'}}>Y</label>
-              <input type="number" value={cameraY} onChange={(e) => setCameraY(Number(e.target.value))} step="0.1" style={{width: '100%'}} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{fontSize: '0.8rem', display: 'block'}}>Z</label>
-              <input type="number" value={cameraZ} onChange={(e) => setCameraZ(Number(e.target.value))} step="0.1" style={{width: '100%'}} />
+              <label style={{fontSize: '0.8rem', display: 'block'}}>Phi (Azimuth)</label>
+              <input type="number" value={cameraPhi} onChange={(e) => setCameraPhi(Number(e.target.value))} min="0" max="360" step="5" style={{width: '100%'}} />
             </div>
           </div>
           
