@@ -5,3 +5,4 @@ numpy
 matplotlib
 PyYAML
 unyt
+mpi4py
