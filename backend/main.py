@@ -366,7 +366,8 @@ def _generate_plot_image(
     alpha_max: float,
     grey_opacity: bool,
     preview: bool,
-    show_box_frame: bool
+    show_box_frame: bool,
+    use_perspective_camera: bool
 ):
     # Ensure global ds matches dataset_path
     global ds
@@ -441,7 +442,13 @@ def _generate_plot_image(
         source.tfh.set_log(log_scale)
         
         # Camera setup
-        cam = sc.camera
+        # use_perspective_camera is passed as a parameter
+        
+        if use_perspective_camera:
+            cam = sc.add_camera(ds, lens_type="perspective")
+        else:
+            cam = sc.camera
+            
         # Resolution: use a fixed reasonable size or base on short_size * dpi?
         # visualize_3d uses (1024, 1024) as standard.
         # Let's use dpi * short_size roughly
@@ -478,7 +485,6 @@ def _generate_plot_image(
             
         # Width
         # Default width is 1.0 * domain_width if not specified
-        width_factor = 1.0
         if width_value is not None and width_unit is not None:
              # Convert width to code units relative to domain width?
              # yt camera set_width takes (value, unit)
@@ -501,22 +507,25 @@ def _generate_plot_image(
                  # Not looking along the longest side. Use the longest side.
                  cam.set_width(max_width)
              
-        # Position
-        # We need to calculate position based on width and focus
-        # visualize_3d.py: cam_pos = ds.domain_center + 1.5 * width * ds.domain_width * view_dir
-        # But cam.set_width sets the view width. The distance depends on the width.
-        # If we use switch_orientation, it handles looking at focus.
-        
+        # Position and orientation
+        # For perspective camera, we need to set position explicitly
+        # Standing at a position, looking at the domain center
         cam.set_focus(ds.domain_center)
         cam.switch_orientation(normal_vector=view_dir, north_vector=north)
         
-        # Adjust position distance to fit the width?
-        # switch_orientation keeps the current distance or sets a default?
-        # Actually, let's just trust switch_orientation and set_width.
-        # But visualize_3d.py explicitly sets position.
-        # Let's try to match visualize_3d.py logic for position if possible, 
-        # but set_width should handle the field of view.
-        
+        # Adjust position: move camera back from focus point
+        # The distance should be related to the domain size
+        # Using a factor of the domain width to position the camera
+        if use_perspective_camera:
+            # Get current width setting
+            current_width = cam.width
+            
+            # Position camera at distance proportional to width
+            # Factor of 1.5 provides good viewing angle
+            distance = 1.5 * current_width
+            # Use ds.arr() to create a proper unit array for the offset
+            offset = view_dir * distance
+            cam.position = ds.domain_center - offset
         
         # Add box frame if requested
         if show_box_frame:
@@ -860,6 +869,7 @@ def get_slice(
     COLORMAP_FRACTION = config.get("colormap_fraction", 0.1)
     SHOW_AXES = config.get("show_axes", False)
     DEFAULT_PARTICLE_SIZE = config.get("default_particle_size", 10)
+    USE_PERSPECTIVE_CAMERA = config.get("use_perspective_camera", True)
 
     # Parse particles
     particle_list = tuple(p.strip() for p in particles.split(',')) if particles else ()
@@ -912,7 +922,8 @@ def get_slice(
             alpha_max,
             grey_opacity,
             preview,
-            show_box_frame
+            show_box_frame,
+            USE_PERSPECTIVE_CAMERA
         )
         
         return Response(content=image_bytes, media_type="image/png")
@@ -1020,6 +1031,7 @@ def export_current_frame(
     COLORMAP_FRACTION = config.get("colormap_fraction", 0.1)
     SHOW_AXES = config.get("show_axes", False)
     DEFAULT_PARTICLE_SIZE = config.get("default_particle_size", 10)
+    USE_PERSPECTIVE_CAMERA = config.get("use_perspective_camera", True)
 
     # Parse particles
     particle_list = tuple(p.strip() for p in particles.split(',')) if particles else ()
@@ -1072,7 +1084,8 @@ def export_current_frame(
             alpha_max,
             grey_opacity,
             False,  # preview mode always False for export
-            show_box_frame
+            show_box_frame,
+            USE_PERSPECTIVE_CAMERA
         )
         
         # Get current dataset name
@@ -1176,6 +1189,7 @@ def export_animation(request: Request):
             COLORMAP_FRACTION = config.get("colormap_fraction", 0.1)
             SHOW_AXES = config.get("show_axes", False)
             DEFAULT_PARTICLE_SIZE = config.get("default_particle_size", 10)
+            USE_PERSPECTIVE_CAMERA = config.get("use_perspective_camera", True)
         except Exception as e:
             print(f"Warning: Could not load config, using defaults: {e}")
             SHORT_SIZE = 3.6
@@ -1184,6 +1198,7 @@ def export_animation(request: Request):
             COLORMAP_FRACTION = 0.1
             SHOW_AXES = False
             DEFAULT_PARTICLE_SIZE = 10
+            USE_PERSPECTIVE_CAMERA = True
         
         # Use provided particle_size or default
         p_size = particle_size if particle_size is not None else DEFAULT_PARTICLE_SIZE
@@ -1269,7 +1284,8 @@ def export_animation(request: Request):
                         alpha_max,
                         grey_opacity,
                         False,  # preview mode always False for export
-                        show_box_frame
+                        show_box_frame,
+                        USE_PERSPECTIVE_CAMERA
                     )
                     
                     # Save PNG frame
