@@ -47,34 +47,6 @@ logger = logging.getLogger(__name__)
 
 yt.set_log_level(40) # 40 = Error
 
-# Robustly turn on YT parallelization
-try:
-    import multiprocessing
-    # Limit OpenMP threads to at most 16
-    num_cpus = multiprocessing.cpu_count()
-    num_threads = min(num_cpus, 16)
-    os.environ["OMP_NUM_THREADS"] = str(num_threads)
-    
-    # Enable YT parallelism
-    # This enables MPI if available and run with mpirun.
-    # NOTE: For this interactive web server, we rely primarily on OpenMP threading (OMP_NUM_THREADS)
-    # rather than MPI (mpirun). 
-    # - Running 'mpirun uvicorn ...' would spawn multiple web servers fighting for the same port.
-    # - OpenMP allows the single web server process to use multiple cores for heavy yt operations (pixelization).
-    # - MPI is best reserved for batch tasks (like animation export) launched via subprocess.
-    
-    # Check if we are running under MPI (OpenMPI sets OMPI_COMM_WORLD_SIZE, others use PMI_SIZE)
-    is_mpi = os.environ.get("OMPI_COMM_WORLD_SIZE") or os.environ.get("PMI_SIZE")
-    
-    if is_mpi:
-        yt.enable_parallelism()
-        logger.info(f"YT MPI parallelism enabled. OMP_NUM_THREADS set to {num_threads}")
-    else:
-        logger.info(f"Running in serial mode (no MPI). YT parallelism via OpenMP only. OMP_NUM_THREADS set to {num_threads}")
-
-except Exception as e:
-    logger.warning(f"Could not configure parallelism: {e}")
-
 def load_config():
     config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
     with open(config_path, "r") as f:
@@ -384,7 +356,8 @@ def _generate_plot_image(
     font_size: int,
     scale_bar_height_fraction: float,
     colormap_fraction: float,
-    show_axes: bool
+    show_axes: bool,
+    field_unit: Optional[str]
 ):
     # Ensure global ds matches dataset_path
     global ds
@@ -426,6 +399,13 @@ def _generate_plot_image(
     # ========================================
     # Configure plot properties
     # ========================================
+    # Set units if specified (for custom unit display)
+    if field_unit is not None and field_unit != "":
+        try:
+            slc.set_unit(field_tuple, field_unit)
+        except Exception as e:
+            print(f"Warning: Could not set unit '{field_unit}' for field {field_tuple}: {e}")
+    
     slc.set_cmap(field_tuple, cmap)
     slc.set_log(field_tuple, log_scale)
     slc.set_background_color(field_tuple, 'black')
@@ -436,35 +416,10 @@ def _generate_plot_image(
         slc.set_width((width_value, width_unit))
         is_squared = True
     
-    # Set colorbar label (do this before setting zlim)
-    if show_colorbar:
-        if colorbar_label:
-            label = colorbar_label
-        else:
-            try:
-                # For projection plots without weight field, yt integrates along the axis
-                # so the units become field_unit * length_unit
-                if kind == "prj" and weight is None:
-                    # Get the field info
-                    field_info = ds.field_info[field_tuple]
-                    # Get the base field label (without units)
-                    field_name = field_info.display_name
-                    # Get the field units
-                    field_units = field_info.units
-                    # Get the length unit from the dataset
-                    length_unit = ds.length_unit
-                    # Construct the integrated units
-                    integrated_units = field_units * length_unit
-                    # Create the label with integrated units
-                    label = f"{field_name} ({integrated_units})"
-                else:
-                    # For slice plots or weighted projections, use the standard label
-                    label = ds.field_info[field_tuple].get_label()
-            except Exception as e:
-                print(f"Warning: Could not get field label: {e}")
-                label = field
-        
-        slc.set_colorbar_label(field_tuple, label)
+    # Set colorbar label only if user provides a custom one
+    # YT automatically generates proper labels with units otherwise
+    if show_colorbar and colorbar_label:
+        slc.set_colorbar_label(field_tuple, colorbar_label)
     
     # Set vmin/vmax if provided
     if vmin is not None and vmax is not None:
@@ -581,7 +536,6 @@ def _generate_plot_image(
         slc.hide_axes(draw_frame=True)
     
     if not show_colorbar:
-        slc.set_colorbar_label(field_tuple, "")
         slc.hide_colorbar()
     
     # Save to temporary file then read into BytesIO
@@ -631,7 +585,10 @@ def _add_derived_fields(ds):
         def _number_density(field, data):
             return data[("gas", "density")] / mean_molecular_weight_per_H_atom
         try:
-            ds.add_field(("gas", "number_density"), function=_number_density, units="cm**-3", sampling_type="cell", force_override=True)
+            # Let YT automatically determine units from the calculation
+            ds.add_field(("gas", "number_density"), function=_number_density, 
+                        units="auto", sampling_type="cell", force_override=True,
+                        display_name="Number Density")
         except Exception as e:
             print(f"Warning: Could not add number density field: {e}")
             pass
@@ -657,7 +614,10 @@ def _add_derived_fields(ds):
                 eint = etot - kinetic_energy
                 return eint * (gamma - 1.0) / (density / mean_molecular_weight_per_H_atom * k_B)
             try:
-                ds.add_field(("gas", "temperature"), function=_temperature_derived, units="K", sampling_type="cell", force_override=True)
+                # Let YT automatically determine units from the calculation
+                ds.add_field(("gas", "temperature"), function=_temperature_derived, 
+                           units="auto", sampling_type="cell", force_override=True,
+                           display_name="Temperature")
                 print("Temperature field added using total_energy_density")
             except Exception as e:
                 print(f"Warning: Could not add temperature field via total_energy_density: {e}")
@@ -672,7 +632,10 @@ def _add_derived_fields(ds):
                 def _temperature_from_internal(field, data):
                     return data[("gas", "internal_energy_density")] * (gamma - 1.0) / (data[("gas", "density")] / mean_molecular_weight_per_H_atom * k_B)
                 try:
-                    ds.add_field(("gas", "temperature"), function=_temperature_from_internal, units="K", sampling_type="cell", force_override=True)
+                    # Let YT automatically determine units from the calculation
+                    ds.add_field(("gas", "temperature"), function=_temperature_from_internal, 
+                               units="auto", sampling_type="cell", force_override=True,
+                               display_name="Temperature")
                     print("Temperature field added using internal_energy_density")
                 except Exception as e:
                     print(f"Warning: Could not add temperature field via internal_energy_density: {e}")
@@ -688,7 +651,10 @@ def _add_derived_fields(ds):
                 data[("gas", "velocity_z")]**2
             )
         try:
-            ds.add_field(("gas", "velocity_magnitude"), function=_velocity_magnitude, units="cm/s", sampling_type="cell", force_override=True)
+            # Let YT automatically determine units from the calculation
+            ds.add_field(("gas", "velocity_magnitude"), function=_velocity_magnitude, 
+                        units="auto", sampling_type="cell", force_override=True,
+                        display_name="Velocity Magnitude")
         except Exception as e:
             print(f"Warning: Could not add velocity magnitude field: {e}")
             pass
@@ -719,7 +685,8 @@ def get_slice(
     grids: bool = False,
     timestamp: bool = False,
     top_left_text: Optional[str] = None,
-    top_right_text: Optional[str] = None
+    top_right_text: Optional[str] = None,
+    field_unit: Optional[str] = None
 ):
     global ds, current_dataset_path
     if ds is None:
@@ -776,7 +743,8 @@ def get_slice(
             FONT_SIZE,
             SCALE_BAR_HEIGHT_FRACTION,
             COLORMAP_FRACTION,
-            SHOW_AXES
+            SHOW_AXES,
+            field_unit
         )
         
         return Response(content=image_bytes, media_type="image/png")
@@ -860,7 +828,8 @@ def export_current_frame(
     grids: bool = False,
     timestamp: bool = False,
     top_left_text: Optional[str] = None,
-    top_right_text: Optional[str] = None
+    top_right_text: Optional[str] = None,
+    field_unit: Optional[str] = None
 ):
     """Export the current frame as a downloadable PNG file"""
     global ds, current_dataset_path
@@ -918,7 +887,8 @@ def export_current_frame(
             FONT_SIZE,
             SCALE_BAR_HEIGHT_FRACTION,
             COLORMAP_FRACTION,
-            SHOW_AXES
+            SHOW_AXES,
+            field_unit
         )
         
         # Get current dataset name
@@ -998,6 +968,7 @@ def export_animation(request: Request):
         timestamp_anno = body.get("timestamp", False)
         top_left_text = body.get("top_left_text")
         top_right_text = body.get("top_right_text")
+        field_unit = body.get("field_unit")
         
         # Validate DATA_DIR
         if not DATA_DIR or not os.path.exists(DATA_DIR):
@@ -1096,7 +1067,8 @@ def export_animation(request: Request):
                         FONT_SIZE,
                         SCALE_BAR_HEIGHT_FRACTION,
                         COLORMAP_FRACTION,
-                        SHOW_AXES
+                        SHOW_AXES,
+                        field_unit
                     )
                     
                     # Save PNG frame
