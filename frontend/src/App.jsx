@@ -55,6 +55,17 @@ function App() {
   const [topLeftText, setTopLeftText] = useState('');
   const [topRightText, setTopRightText] = useState('');
 
+  // 3D Rendering state
+  const [cameraTheta, setCameraTheta] = useState(0.0);
+  const [cameraPhi, setCameraPhi] = useState(0.0);
+  const [nLayers, setNLayers] = useState(5);
+  const [alphaMin, setAlphaMin] = useState(0.1);
+  const [alphaMax, setAlphaMax] = useState(1.0);
+  const [greyOpacity, setGreyOpacity] = useState(false);
+  const [previewMode, setPreviewMode] = useState(true);
+  const [showBoxFrame, setShowBoxFrame] = useState(false);
+  const [useCache, setUseCache] = useState(true);
+
   // Applied states for new features (only for those that need explicit refresh)
   const [appliedPlotType, setAppliedPlotType] = useState('slc');
   const [appliedWeightField, setAppliedWeightField] = useState('None');
@@ -63,6 +74,16 @@ function App() {
   const [appliedFieldUnit, setAppliedFieldUnit] = useState('');
   const [appliedTopLeftText, setAppliedTopLeftText] = useState('');
   const [appliedTopRightText, setAppliedTopRightText] = useState('');
+  
+  // Applied 3D states
+  const [appliedCameraTheta, setAppliedCameraTheta] = useState(0.0);
+  const [appliedCameraPhi, setAppliedCameraPhi] = useState(0.0);
+  const [appliedNLayers, setAppliedNLayers] = useState(5);
+  const [appliedAlphaMin, setAppliedAlphaMin] = useState(0.1);
+  const [appliedAlphaMax, setAppliedAlphaMax] = useState(1.0);
+  const [appliedGreyOpacity, setAppliedGreyOpacity] = useState(false);
+  const [appliedPreviewMode, setAppliedPreviewMode] = useState(true);
+  const [appliedShowBoxFrame, setAppliedShowBoxFrame] = useState(false);
 
   // Export state
   const [isExporting, setIsExporting] = useState(false);
@@ -292,6 +313,16 @@ function App() {
     setAppliedFieldUnit(fieldUnit);
     setAppliedTopLeftText(topLeftText);
     setAppliedTopRightText(topRightText);
+    
+    // Apply 3D settings
+    setAppliedCameraTheta(cameraTheta);
+    setAppliedCameraPhi(cameraPhi);
+    setAppliedNLayers(nLayers);
+    setAppliedAlphaMin(alphaMin);
+    setAppliedAlphaMax(alphaMax);
+    setAppliedGreyOpacity(greyOpacity);
+    setAppliedPreviewMode(previewMode);
+    setAppliedShowBoxFrame(showBoxFrame);
 
     setRefreshTrigger(prev => prev + 1);
   };
@@ -326,6 +357,14 @@ function App() {
       if (timestamp) url += `&timestamp=true`;
       if (appliedTopLeftText) url += `&top_left_text=${encodeURIComponent(appliedTopLeftText)}`;
       if (appliedTopRightText) url += `&top_right_text=${encodeURIComponent(appliedTopRightText)}`;
+      
+      // 3D params
+      if (appliedPlotType === 'vol') {
+        url += `&camera_theta=${appliedCameraTheta}&camera_phi=${appliedCameraPhi}`;
+        url += `&n_layers=${appliedNLayers}&alpha_min=${appliedAlphaMin}&alpha_max=${appliedAlphaMax}`;
+        url += `&grey_opacity=${appliedGreyOpacity}`;
+        url += `&show_box_frame=${appliedShowBoxFrame}`;
+      }
 
       const response = await fetch(url);
       if (!response.ok) {
@@ -396,7 +435,15 @@ function App() {
         grids: grids,
         timestamp: timestamp,
         top_left_text: appliedTopLeftText || null,
-        top_right_text: appliedTopRightText || null
+        top_right_text: appliedTopRightText || null,
+        // 3D params
+        camera_theta: appliedCameraTheta,
+        camera_phi: appliedCameraPhi,
+        n_layers: appliedNLayers,
+        alpha_min: appliedAlphaMin,
+        alpha_max: appliedAlphaMax,
+        grey_opacity: appliedGreyOpacity,
+        show_box_frame: appliedShowBoxFrame
       };
 
       const response = await fetch('/api/export/animation', {
@@ -471,7 +518,8 @@ function App() {
                 fontFamily: 'monospace',
                 fontSize: '0.85rem',
                 border: '1px solid #ccc',
-                borderRadius: '4px'
+                borderRadius: '4px',
+                boxSizing: 'border-box'
               }}
             />
             <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -570,6 +618,16 @@ Full details in browser console (F12)`;
           timestamp={timestamp} setTimestamp={setTimestamp}
           topLeftText={topLeftText} setTopLeftText={setTopLeftText}
           topRightText={topRightText} setTopRightText={setTopRightText}
+          // 3D props
+          cameraTheta={cameraTheta} setCameraTheta={setCameraTheta}
+          cameraPhi={cameraPhi} setCameraPhi={setCameraPhi}
+          nLayers={nLayers} setNLayers={setNLayers}
+          alphaMin={alphaMin} setAlphaMin={setAlphaMin}
+          alphaMax={alphaMax} setAlphaMax={setAlphaMax}
+          greyOpacity={greyOpacity} setGreyOpacity={setGreyOpacity}
+          previewMode={previewMode} setPreviewMode={setPreviewMode}
+          showBoxFrame={showBoxFrame} setShowBoxFrame={setShowBoxFrame}
+          useCache={useCache} setUseCache={setUseCache}
           // Export props
           onExportCurrentFrame={handleExportCurrentFrame}
           onExportAnimation={handleExportAnimation}
@@ -609,6 +667,16 @@ Full details in browser console (F12)`;
           timestamp={timestamp}
           topLeftText={appliedTopLeftText}
           topRightText={appliedTopRightText}
+          // 3D props
+          cameraTheta={appliedCameraTheta}
+          cameraPhi={appliedCameraPhi}
+          nLayers={appliedNLayers}
+          alphaMin={appliedAlphaMin}
+          alphaMax={appliedAlphaMax}
+          greyOpacity={appliedGreyOpacity}
+          previewMode={appliedPreviewMode}
+          showBoxFrame={appliedShowBoxFrame}
+          useCache={useCache}
         />
       </div>
     </div>

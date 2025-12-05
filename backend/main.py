@@ -324,8 +324,8 @@ try:
 except Exception:
     CACHE_MAX_SIZE = 32
 
-@lru_cache(maxsize=CACHE_MAX_SIZE)
-def _generate_plot_image(
+# Core implementation without caching
+def _generate_plot_image_impl(
     dataset_path: str,
     kind: str,
     axis: str,
@@ -357,7 +357,17 @@ def _generate_plot_image(
     scale_bar_height_fraction: float,
     colormap_fraction: float,
     show_axes: bool,
-    field_unit: Optional[str]
+    field_unit: Optional[str],
+    # 3D rendering params
+    camera_theta: float,
+    camera_phi: float,
+    n_layers: int,
+    alpha_min: float,
+    alpha_max: float,
+    grey_opacity: bool,
+    preview: bool,
+    show_box_frame: bool,
+    use_perspective_camera: bool
 ):
     # Ensure global ds matches dataset_path
     global ds
@@ -393,11 +403,161 @@ def _generate_plot_image(
         slc = yt.SlicePlot(ds, axis, field_tuple, center=ds.domain_center)
     elif kind == "prj":
         slc = yt.ProjectionPlot(ds, axis, field_tuple, weight_field=weight, center=ds.domain_center)
+    elif kind == "vol":
+        # Volume rendering
+        # We handle this separately because it returns a scene, not a plot container like SlicePlot
+        pass
     else:
         raise ValueError(f"Unknown plot kind: {kind}")
     
     # ========================================
-    # Configure plot properties
+    # Volume Rendering Handling
+    # ========================================
+    if kind == "vol":
+        print(f"Creating volume rendering for {field}...")
+        sc = yt.create_scene(ds, field=field_tuple)
+        source = sc[0]
+        
+        # Set up transfer function
+        data_bounds = ds.all_data().quantities.extrema(field_tuple)
+        
+        # Use provided vmin/vmax or fall back to data extrema
+        t_min = float(vmin) if vmin is not None else float(data_bounds[0])
+        t_max = float(vmax) if vmax is not None else float(data_bounds[1])
+        bounds = [t_min, t_max]
+        
+        if log_scale:
+            real_bounds = [np.log10(t_min), np.log10(t_max)]
+        else:
+            real_bounds = bounds
+            
+        tf = yt.ColorTransferFunction(real_bounds, grey_opacity=grey_opacity)
+        # More control 
+        # tf.add_layers(n_layers, w=0.02, colormap=cmap, alpha=np.logspace(np.log10(alpha_min), np.log10(alpha_max), n_layers))
+        # Simple default
+        tf.add_layers(n_layers, colormap=cmap)
+        
+        source.tfh.tf = tf
+        source.tfh.bounds = bounds
+        source.tfh.set_log(log_scale)
+        
+        # Camera setup
+        # use_perspective_camera is passed as a parameter
+        
+        if use_perspective_camera:
+            cam = sc.add_camera(ds, lens_type="perspective")
+        else:
+            cam = sc.camera
+            
+        # Resolution: use a fixed reasonable size or base on short_size * dpi?
+        # visualize_3d uses (1024, 1024) as standard.
+        # Let's use dpi * short_size roughly
+        if preview:
+            res_px = 512
+        else:
+            vol_res_scale_up = 2.0
+            res_px = int(short_size * dpi * vol_res_scale_up)
+        cam.resolution = (res_px, res_px)
+        
+        # Camera direction
+        # Convert spherical (theta, phi) to cartesian (x, y, z)
+        # Theta: Polar angle (0-180)
+        # Phi: Azimuthal angle (0-360)
+        theta_rad = np.radians(camera_theta)
+        phi_rad = np.radians(camera_phi)
+        
+        cx = np.sin(theta_rad) * np.cos(phi_rad)
+        cy = np.sin(theta_rad) * np.sin(phi_rad)
+        cz = np.cos(theta_rad)
+        
+        view_dir = np.array([cx, cy, cz], dtype=float)
+        norm = np.linalg.norm(view_dir)
+        if norm == 0:
+            view_dir = np.array([1.0, 0.0, 0.0])
+        else:
+            view_dir = view_dir / norm
+            
+        # North vector
+        if abs(view_dir[2]) > 0.9:
+            north = np.array([0, 1, 0])
+        else:
+            north = np.array([0, 0, 1])
+            
+        # Width
+        # Default width is 1.0 * domain_width if not specified
+        if width_value is not None and width_unit is not None:
+             # Convert width to code units relative to domain width?
+             # yt camera set_width takes (value, unit)
+             cam.set_width((width_value, width_unit))
+        else:
+             # Smart width logic:
+             # 1. Find the longest side
+             domain_width = ds.domain_width
+             max_dim_idx = np.argmax(domain_width)
+             max_width = domain_width[max_dim_idx]
+             
+             # 2. Check if looking along the longest side (small angle)
+             # view_dir is normalized. Check component along max_dim_idx.
+             # If abs(view_dir[max_dim_idx]) is close to 1, we are looking along that axis.
+             if abs(view_dir[max_dim_idx]) > 0.9:
+                 # Looking along the longest side. Use the shortest side.
+                 min_width = np.min(domain_width)
+                 cam.set_width(min_width)
+             else:
+                 # Not looking along the longest side. Use the longest side.
+                 cam.set_width(max_width)
+             
+        # Position and orientation
+        # For perspective camera, we need to set position explicitly
+        # Standing at a position, looking at the domain center
+        cam.set_focus(ds.domain_center)
+        cam.switch_orientation(normal_vector=view_dir, north_vector=north)
+        
+        # Adjust position: move camera back from focus point
+        # The distance should be related to the domain size
+        # Using a factor of the domain width to position the camera
+        if use_perspective_camera:
+            # Get current width setting
+            current_width = cam.width
+            
+            # Position camera at distance proportional to width
+            # Factor of 1.5 provides good viewing angle
+            distance = 1.5 * current_width
+            # Use ds.arr() to create a proper unit array for the offset
+            offset = view_dir * distance
+            cam.position = ds.domain_center - offset
+        
+        # Add box frame if requested
+        if show_box_frame:
+            # Use BoxSource which draws a box with transparent faces (only lines)
+            # sc.annotate_domain() uses BoxSource internally but let's be explicit
+            from yt.visualization.volume_rendering.api import BoxSource
+            box_source = BoxSource(
+                ds.domain_left_edge,
+                ds.domain_right_edge,
+                color=[0.2, 0.2, 0.2, 0.1] # Fully opaque white lines
+            )
+            sc.add_source(box_source)
+            
+        # Render
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_file:
+            tmp_path = tmp_file.name
+            
+        try:
+            # Sigma clip skews the image if there are very bright pixels (like white lines)
+            # Use a very high sigma or None to avoid clipping the volume
+            sc.save(tmp_path, sigma_clip=3.5)
+            with open(tmp_path, 'rb') as f:
+                image_bytes = f.read()
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+                
+        return image_bytes
+
+    # ========================================
+    # Configure plot properties (Slice/Projection)
     # ========================================
     # Set units if specified (for custom unit display)
     if field_unit is not None and field_unit != "":
@@ -565,6 +725,141 @@ def _generate_plot_image(
     
     return image_bytes
 
+# Cached version of the function
+@lru_cache(maxsize=CACHE_MAX_SIZE)
+def _generate_plot_image_cached(
+    dataset_path: str,
+    kind: str,
+    axis: str,
+    field: str,
+    weight_field: Optional[str],
+    coord: float,
+    vmin: Optional[float],
+    vmax: Optional[float],
+    show_colorbar: bool,
+    log_scale: bool,
+    colorbar_label: Optional[str],
+    colorbar_orientation: str,
+    cmap: str,
+    dpi: int,
+    show_scale_bar: bool,
+    scale_bar_size: Optional[float],
+    scale_bar_unit: Optional[str],
+    width_value: Optional[float],
+    width_unit: Optional[str],
+    particles: tuple,
+    particle_size: int,
+    particle_color: str,
+    grids: bool,
+    timestamp: bool,
+    top_left_text: Optional[str],
+    top_right_text: Optional[str],
+    short_size: float,
+    font_size: int,
+    scale_bar_height_fraction: float,
+    colormap_fraction: float,
+    show_axes: bool,
+    field_unit: Optional[str],
+    camera_theta: float,
+    camera_phi: float,
+    n_layers: int,
+    alpha_min: float,
+    alpha_max: float,
+    grey_opacity: bool,
+    preview: bool,
+    show_box_frame: bool,
+    use_perspective_camera: bool
+):
+    """Cached wrapper for _generate_plot_image_impl"""
+    return _generate_plot_image_impl(
+        dataset_path, kind, axis, field, weight_field, coord,
+        vmin, vmax, show_colorbar, log_scale, colorbar_label,
+        colorbar_orientation, cmap, dpi, show_scale_bar,
+        scale_bar_size, scale_bar_unit, width_value, width_unit,
+        particles, particle_size, particle_color, grids, timestamp,
+        top_left_text, top_right_text, short_size, font_size,
+        scale_bar_height_fraction, colormap_fraction, show_axes,
+        field_unit, camera_theta, camera_phi, n_layers, alpha_min,
+        alpha_max, grey_opacity, preview, show_box_frame,
+        use_perspective_camera
+    )
+
+# Routing function that chooses cached or non-cached version
+def _generate_plot_image(
+    dataset_path: str,
+    kind: str,
+    axis: str,
+    field: str,
+    weight_field: Optional[str],
+    coord: float,
+    vmin: Optional[float],
+    vmax: Optional[float],
+    show_colorbar: bool,
+    log_scale: bool,
+    colorbar_label: Optional[str],
+    colorbar_orientation: str,
+    cmap: str,
+    dpi: int,
+    show_scale_bar: bool,
+    scale_bar_size: Optional[float],
+    scale_bar_unit: Optional[str],
+    width_value: Optional[float],
+    width_unit: Optional[str],
+    particles: tuple,
+    particle_size: int,
+    particle_color: str,
+    grids: bool,
+    timestamp: bool,
+    top_left_text: Optional[str],
+    top_right_text: Optional[str],
+    short_size: float,
+    font_size: int,
+    scale_bar_height_fraction: float,
+    colormap_fraction: float,
+    show_axes: bool,
+    field_unit: Optional[str],
+    camera_theta: float,
+    camera_phi: float,
+    n_layers: int,
+    alpha_min: float,
+    alpha_max: float,
+    grey_opacity: bool,
+    preview: bool,
+    show_box_frame: bool,
+    use_perspective_camera: bool,
+    use_cache: bool = True
+):
+    """
+    Router function that calls either cached or non-cached version
+    based on use_cache parameter.
+    """
+    if use_cache:
+        return _generate_plot_image_cached(
+            dataset_path, kind, axis, field, weight_field, coord,
+            vmin, vmax, show_colorbar, log_scale, colorbar_label,
+            colorbar_orientation, cmap, dpi, show_scale_bar,
+            scale_bar_size, scale_bar_unit, width_value, width_unit,
+            particles, particle_size, particle_color, grids, timestamp,
+            top_left_text, top_right_text, short_size, font_size,
+            scale_bar_height_fraction, colormap_fraction, show_axes,
+            field_unit, camera_theta, camera_phi, n_layers, alpha_min,
+            alpha_max, grey_opacity, preview, show_box_frame,
+            use_perspective_camera
+        )
+    else:
+        return _generate_plot_image_impl(
+            dataset_path, kind, axis, field, weight_field, coord,
+            vmin, vmax, show_colorbar, log_scale, colorbar_label,
+            colorbar_orientation, cmap, dpi, show_scale_bar,
+            scale_bar_size, scale_bar_unit, width_value, width_unit,
+            particles, particle_size, particle_color, grids, timestamp,
+            top_left_text, top_right_text, short_size, font_size,
+            scale_bar_height_fraction, colormap_fraction, show_axes,
+            field_unit, camera_theta, camera_phi, n_layers, alpha_min,
+            alpha_max, grey_opacity, preview, show_box_frame,
+            use_perspective_camera
+        )
+
 def _add_derived_fields(ds):
     """
     Add derived fields to the dataset.
@@ -685,8 +980,18 @@ def get_slice(
     grids: bool = False,
     timestamp: bool = False,
     top_left_text: Optional[str] = None,
-    top_right_text: Optional[str] = None,
-    field_unit: Optional[str] = None
+        top_right_text: Optional[str] = None,
+        field_unit: Optional[str] = None,
+        # 3D params
+        camera_theta: float = 0.0,
+        camera_phi: float = 0.0,
+        n_layers: int = 5,
+        alpha_min: float = 0.1,
+        alpha_max: float = 1.0,
+        grey_opacity: bool = False,
+        preview: bool = False,
+        show_box_frame: bool = False,
+        use_cache: bool = True
 ):
     global ds, current_dataset_path
     if ds is None:
@@ -700,6 +1005,7 @@ def get_slice(
     COLORMAP_FRACTION = config.get("colormap_fraction", 0.1)
     SHOW_AXES = config.get("show_axes", False)
     DEFAULT_PARTICLE_SIZE = config.get("default_particle_size", 10)
+    USE_PERSPECTIVE_CAMERA = config.get("use_perspective_camera", True)
 
     # Parse particles
     particle_list = tuple(p.strip() for p in particles.split(',')) if particles else ()
@@ -744,7 +1050,17 @@ def get_slice(
             SCALE_BAR_HEIGHT_FRACTION,
             COLORMAP_FRACTION,
             SHOW_AXES,
-            field_unit
+            field_unit,
+            camera_theta,
+            camera_phi,
+            n_layers,
+            alpha_min,
+            alpha_max,
+            grey_opacity,
+            preview,
+            show_box_frame,
+            USE_PERSPECTIVE_CAMERA,
+            use_cache
         )
         
         return Response(content=image_bytes, media_type="image/png")
@@ -829,7 +1145,16 @@ def export_current_frame(
     timestamp: bool = False,
     top_left_text: Optional[str] = None,
     top_right_text: Optional[str] = None,
-    field_unit: Optional[str] = None
+    field_unit: Optional[str] = None,
+    # 3D params
+    camera_theta: float = 0.0,
+    camera_phi: float = 0.0,
+    n_layers: int = 5,
+    alpha_min: float = 0.1,
+    alpha_max: float = 1.0,
+    grey_opacity: bool = False,
+    show_box_frame: bool = False,
+    use_cache: bool = True
 ):
     """Export the current frame as a downloadable PNG file"""
     global ds, current_dataset_path
@@ -844,6 +1169,7 @@ def export_current_frame(
     COLORMAP_FRACTION = config.get("colormap_fraction", 0.1)
     SHOW_AXES = config.get("show_axes", False)
     DEFAULT_PARTICLE_SIZE = config.get("default_particle_size", 10)
+    USE_PERSPECTIVE_CAMERA = config.get("use_perspective_camera", True)
 
     # Parse particles
     particle_list = tuple(p.strip() for p in particles.split(',')) if particles else ()
@@ -888,7 +1214,17 @@ def export_current_frame(
             SCALE_BAR_HEIGHT_FRACTION,
             COLORMAP_FRACTION,
             SHOW_AXES,
-            field_unit
+            field_unit,
+            camera_theta,
+            camera_phi,
+            n_layers,
+            alpha_min,
+            alpha_max,
+            grey_opacity,
+            False,  # preview mode always False for export
+            show_box_frame,
+            USE_PERSPECTIVE_CAMERA,
+            use_cache
         )
         
         # Get current dataset name
@@ -970,6 +1306,15 @@ def export_animation(request: Request):
         top_right_text = body.get("top_right_text")
         field_unit = body.get("field_unit")
         
+        # 3D rendering parameters
+        camera_theta = body.get("camera_theta", 0.0)
+        camera_phi = body.get("camera_phi", 0.0)
+        n_layers = body.get("n_layers", 5)
+        alpha_min = body.get("alpha_min", 0.1)
+        alpha_max = body.get("alpha_max", 1.0)
+        grey_opacity = body.get("grey_opacity", False)
+        show_box_frame = body.get("show_box_frame", False)
+        
         # Validate DATA_DIR
         if not DATA_DIR or not os.path.exists(DATA_DIR):
             raise HTTPException(status_code=400, detail=f"Data directory does not exist: {DATA_DIR}")
@@ -983,6 +1328,7 @@ def export_animation(request: Request):
             COLORMAP_FRACTION = config.get("colormap_fraction", 0.1)
             SHOW_AXES = config.get("show_axes", False)
             DEFAULT_PARTICLE_SIZE = config.get("default_particle_size", 10)
+            USE_PERSPECTIVE_CAMERA = config.get("use_perspective_camera", True)
         except Exception as e:
             print(f"Warning: Could not load config, using defaults: {e}")
             SHORT_SIZE = 3.6
@@ -991,6 +1337,7 @@ def export_animation(request: Request):
             COLORMAP_FRACTION = 0.1
             SHOW_AXES = False
             DEFAULT_PARTICLE_SIZE = 10
+            USE_PERSPECTIVE_CAMERA = True
         
         # Use provided particle_size or default
         p_size = particle_size if particle_size is not None else DEFAULT_PARTICLE_SIZE
@@ -1068,7 +1415,17 @@ def export_animation(request: Request):
                         SCALE_BAR_HEIGHT_FRACTION,
                         COLORMAP_FRACTION,
                         SHOW_AXES,
-                        field_unit
+                        field_unit,
+                        camera_theta,
+                        camera_phi,
+                        n_layers,
+                        alpha_min,
+                        alpha_max,
+                        grey_opacity,
+                        False,  # preview mode always False for export
+                        show_box_frame,
+                        USE_PERSPECTIVE_CAMERA,
+                        True  # use_cache=True for animation export (better performance)
                     )
                     
                     # Save PNG frame

@@ -6,7 +6,10 @@ function Viewer({
   showScaleBar, scaleBarSize, scaleBarUnit, 
   dpi,
   // New props
-  plotType, weightField, widthValue, widthUnit, fieldUnit, particles, particleSize, particleColor, grids, timestamp, topLeftText, topRightText
+  plotType, weightField, widthValue, widthUnit, fieldUnit, particles, particleSize, particleColor, grids, timestamp, topLeftText, topRightText,
+  // 3D props
+  cameraTheta, cameraPhi, nLayers, alphaMin, alphaMax, greyOpacity, previewMode, showBoxFrame,
+  useCache
 }) {
   const [imageUrl, setImageUrl] = useState(null);
   const [error, setError] = useState(null);
@@ -19,7 +22,9 @@ function Viewer({
     axis, field, coord, refreshTrigger, 
     showColorbar, vmin, vmax, logScale, colorbarLabel, colorbarOrientation, cmap,
     showScaleBar, scaleBarSize, scaleBarUnit, dpi,
-    plotType, weightField, widthValue, widthUnit, fieldUnit, particles, particleSize, particleColor, grids, timestamp, topLeftText, topRightText
+    plotType, weightField, widthValue, widthUnit, fieldUnit, particles, particleSize, particleColor, grids, timestamp, topLeftText, topRightText,
+    cameraTheta, cameraPhi, nLayers, alphaMin, alphaMax, greyOpacity, previewMode, showBoxFrame,
+    useCache
   ]);
 
   const fetchImage = async () => {
@@ -62,6 +67,18 @@ function Viewer({
       if (timestamp) url += `&timestamp=true`;
       if (topLeftText) url += `&top_left_text=${encodeURIComponent(topLeftText)}`;
       if (topRightText) url += `&top_right_text=${encodeURIComponent(topRightText)}`;
+      
+      // 3D params
+      if (plotType === 'vol') {
+        url += `&camera_theta=${cameraTheta}&camera_phi=${cameraPhi}`;
+        url += `&n_layers=${nLayers}&alpha_min=${alphaMin}&alpha_max=${alphaMax}`;
+        if (greyOpacity) url += `&grey_opacity=true`;
+        if (previewMode) url += `&preview=true`;
+        if (showBoxFrame) url += `&show_box_frame=true`;
+      }
+      
+      // Cache control
+      url += `&use_cache=${useCache}`;
       
       console.log('DEBUG Viewer: Final URL:', url);
       

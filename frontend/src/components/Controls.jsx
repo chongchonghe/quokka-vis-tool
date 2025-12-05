@@ -34,6 +34,16 @@ function Controls({
   timestamp, setTimestamp,
   topLeftText, setTopLeftText,
   topRightText, setTopRightText,
+  // 3D props
+  cameraTheta, setCameraTheta,
+  cameraPhi, setCameraPhi,
+  nLayers, setNLayers,
+  alphaMin, setAlphaMin,
+  alphaMax, setAlphaMax,
+  greyOpacity, setGreyOpacity,
+  previewMode, setPreviewMode,
+  showBoxFrame, setShowBoxFrame,
+  useCache, setUseCache,
   // Export props
   onExportCurrentFrame,
   onExportAnimation,
@@ -53,6 +63,9 @@ function Controls({
   };
   return (
     <div className="controls-container">
+
+      <button onClick={onRefresh} style={{ marginBottom: '0.5rem' }}>Refresh</button>
+
       <div className="control-group compact">
         <label>Dataset:</label>
         <select value={currentDataset} onChange={(e) => setDataset(e.target.value)}>
@@ -69,7 +82,7 @@ function Controls({
           </button>
 
           <div className="fps-buttons">
-            {[0.3, 0.5, 1, 2, 3, 5].map(val => (
+            {[0.2, 0.3, 0.5, 1, 2, 3].map(val => (
               <button 
                 key={val} 
                 onClick={() => setFps(val)}
@@ -87,8 +100,79 @@ function Controls({
         <select value={plotType} onChange={(e) => setPlotType(e.target.value)}>
           <option value="slc">Slice</option>
           <option value="prj">Projection</option>
+          <option value="vol">Volume Rendering</option>
         </select>
       </div>
+
+      {plotType === 'vol' && (
+        <div className="control-group">
+          <label style={{marginBottom: '0.5rem', display: 'block', fontWeight: 'bold', fontSize: '0.9rem'}}>3D Camera Direction:</label>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{fontSize: '0.8rem', display: 'block'}}>Theta (Polar)</label>
+              <input type="number" value={cameraTheta} onChange={(e) => setCameraTheta(Number(e.target.value))} min="0" max="180" step="5" style={{width: '100%'}} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{fontSize: '0.8rem', display: 'block'}}>Phi (Azimuth)</label>
+              <input type="number" value={cameraPhi} onChange={(e) => setCameraPhi(Number(e.target.value))} min="0" max="360" step="5" style={{width: '100%'}} />
+            </div>
+          </div>
+          
+          <label style={{marginTop: '0.5rem', marginBottom: '0.5rem', display: 'block', fontWeight: 'bold', fontSize: '0.9rem'}}>Transfer Function:</label>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{fontSize: '0.8rem', display: 'block'}}>Layers</label>
+              <input type="number" value={nLayers} onChange={(e) => setNLayers(Number(e.target.value))} min="1" max="20" style={{width: '100%'}} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{fontSize: '0.8rem', display: 'block'}}>Min Alpha</label>
+              <input type="number" value={alphaMin} onChange={(e) => setAlphaMin(Number(e.target.value))} step="0.1" min="0" max="1" style={{width: '100%'}} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{fontSize: '0.8rem', display: 'block'}}>Max Alpha</label>
+              <input type="number" value={alphaMax} onChange={(e) => setAlphaMax(Number(e.target.value))} step="0.1" min="0" max="1" style={{width: '100%'}} />
+            </div>
+          </div>
+          
+          <div style={{ marginTop: '0.5rem' }}>
+            <label style={{ fontWeight: 'normal', fontSize: '0.9rem', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={greyOpacity} 
+                onChange={(e) => setGreyOpacity(e.target.checked)} 
+                style={{ width: 'auto', marginRight: '0.5rem' }} 
+              />
+              Grey Opacity (Opaque Channels)
+            </label>
+          </div>
+          
+          <div style={{ marginTop: '0.5rem' }}>
+            <label style={{ fontWeight: 'normal', fontSize: '0.9rem', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={previewMode} 
+                onChange={(e) => setPreviewMode(e.target.checked)} 
+                style={{ width: 'auto', marginRight: '0.5rem' }} 
+              />
+              Preview Mode (Low Res)
+            </label>
+          </div>
+          
+          <div style={{ marginTop: '0.5rem' }}>
+            <label style={{ fontWeight: 'normal', fontSize: '0.9rem', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={showBoxFrame} 
+                onChange={(e) => setShowBoxFrame(e.target.checked)} 
+                style={{ width: 'auto', marginRight: '0.5rem' }} 
+              />
+              Show Box Frame
+            </label>
+          </div>
+        </div>
+      )}
 
       {plotType === 'prj' && (
         <div className="control-group compact">
@@ -306,6 +390,18 @@ function Controls({
         <label>
           <input 
             type="checkbox" 
+            checked={useCache} 
+            onChange={(e) => setUseCache(e.target.checked)} 
+            style={{ width: 'auto', marginRight: '0.5rem' }}
+          />
+          Use Cache
+        </label>
+      </div>
+
+      <div className="control-group">
+        <label>
+          <input 
+            type="checkbox" 
             checked={showColorbar} 
             onChange={(e) => setShowColorbar(e.target.checked)} 
             style={{ width: 'auto', marginRight: '0.5rem' }}
@@ -369,8 +465,6 @@ function Controls({
         />
       </div>
       
-      <button onClick={onRefresh}>Refresh</button>
-
       <div className="control-group" style={{ marginTop: '0.5rem' }}>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <input type="text" value={topLeftText} onChange={(e) => setTopLeftText(e.target.value)} placeholder="Top Left Text" />

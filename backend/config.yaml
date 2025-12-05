@@ -5,5 +5,6 @@ colormap_fraction: 0.2
 default_dpi: 300
 cache_max_size: 200
 show_axes: false  # Set to true to show axis labels and tick labels
+use_perspective_camera: true  # Set to true to use perspective lens for volume rendering
 particle_types: [Rad, CIC, CICRad, StochasticStellarPop, Sink]
 default_particle_size: 8  # Default size for particle markers
