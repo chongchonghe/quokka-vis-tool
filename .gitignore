@@ -1,5 +1,6 @@
 /data/
 *.png
+gitignored-*
 
 # General
 .DS_Store
