@@ -198,8 +198,10 @@ function Controls({
       <div className="control-group compact">
         <label>Field:</label>
         <select value={field} onChange={(e) => setField(e.target.value)}>
-          {fieldsList.map(f => (
-            <option key={f} value={f}>{f}</option>
+          {fieldsList.map((fieldOption) => (
+            <option key={fieldOption.value} value={fieldOption.value}>
+              {fieldOption.label}
+            </option>
           ))}
         </select>
       </div>

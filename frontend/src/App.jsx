@@ -3,6 +3,33 @@ import './App.css'
 import Viewer from './components/Viewer'
 import Controls from './components/Controls'
 
+const normalizeFieldOptions = (fieldsArray = []) => {
+  const normalized = [];
+  const seen = new Set();
+
+  for (const entry of fieldsArray) {
+    if (!Array.isArray(entry) || entry.length < 2) continue;
+
+    const namespace = String(entry[0]).trim();
+    const name = String(entry[1]).trim();
+    const value = `${namespace}:${name}`;
+
+    if (seen.has(value)) continue;
+    seen.add(value);
+
+    const label = namespace === 'gas' ? name : `${namespace}:${name}`;
+    normalized.push({ namespace, name, value, label });
+  }
+
+  return normalized;
+};
+
+const sanitizeForFilename = (value) => {
+  if (!value) return 'value';
+  const sanitized = String(value).trim().replace(/[^a-zA-Z0-9._-]+/g, '_');
+  return sanitized || 'value';
+};
+
 function App() {
   const [axis, setAxis] = useState('z');
   const [field, setField] = useState(null);
@@ -275,18 +302,18 @@ function App() {
       
       const fieldsRes = await fetch('/api/fields');
       const fieldsData = await fieldsRes.json();
-      setFieldsList(fieldsData.fields);
-      
-      // Keep current field if available, else default to 'density' if it exists, otherwise first field
-      if (fieldsData.fields.length > 0) {
-        if (!field || !fieldsData.fields.includes(field)) {
-          // Try to set 'density' as default if it exists
-          if (fieldsData.fields.includes('density')) {
-            setField('density');
-          } else {
-            setField(fieldsData.fields[0]);
-          }
+      const normalizedFields = normalizeFieldOptions(fieldsData.fields || []);
+      setFieldsList(normalizedFields);
+
+      if (normalizedFields.length > 0) {
+        const hasCurrentField = normalizedFields.some((f) => f.value === field);
+        if (!hasCurrentField) {
+          const defaultField =
+            normalizedFields.find((f) => f.value === 'gas:density') || normalizedFields[0];
+          setField(defaultField.value);
         }
+      } else {
+        setField(null);
       }
       
       // Trigger refresh of viewer
@@ -337,8 +364,12 @@ function App() {
       setIsExporting(true);
       setExportProgress('Exporting current frame...');
 
+      const encodedField = encodeURIComponent(field);
+      const sanitizedFieldName = sanitizeForFilename(field);
+      const sanitizedDatasetName = sanitizeForFilename(currentDataset || 'dataset');
+
       // Build URL with all current settings
-      let url = `/api/export/current_frame?axis=${axis}&field=${field}&kind=${appliedPlotType}&log_scale=${logScale}&cmap=${cmap}&dpi=${appliedDpi || 300}&show_colorbar=${showColorbar}&show_scale_bar=${showScaleBar}`;
+      let url = `/api/export/current_frame?axis=${axis}&field=${encodedField}&kind=${appliedPlotType}&log_scale=${logScale}&cmap=${cmap}&dpi=${appliedDpi || 300}&show_colorbar=${showColorbar}&show_scale_bar=${showScaleBar}`;
       
       if (appliedWeightField && appliedWeightField !== 'None') url += `&weight_field=${appliedWeightField}`;
       if (appliedVmin) url += `&vmin=${appliedVmin}`;
@@ -376,7 +407,7 @@ function App() {
       const downloadUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
-      a.download = `${currentDataset}_${field}_${axis}.png`;
+      a.download = `${sanitizedDatasetName}_${sanitizedFieldName}_${axis}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -406,6 +437,8 @@ function App() {
     try {
       setIsExporting(true);
       setExportProgress(`Exporting ${datasets.length} frames...`);
+
+      const sanitizedFieldForExport = sanitizeForFilename(field);
 
       // Prepare request body with all settings
       const requestBody = {
@@ -467,7 +500,7 @@ function App() {
       
       // Extract filename from Content-Disposition header if available
       const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = `export_${field}_${axis}.zip`;
+      let filename = `export_${sanitizedFieldForExport}_${axis}.zip`;
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename=(.+)/);
         if (filenameMatch) {

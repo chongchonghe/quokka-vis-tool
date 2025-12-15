@@ -30,7 +30,8 @@ function Viewer({
   const fetchImage = async () => {
     setError(null);
     try {
-      let url = `/api/slice?axis=${axis}&field=${field}&refreshTrigger=${refreshTrigger}&show_colorbar=${showColorbar}&log_scale=${logScale}&cmap=${cmap}&dpi=${dpi || 300}&show_scale_bar=${showScaleBar}`;
+      const encodedField = encodeURIComponent(field);
+      let url = `/api/slice?axis=${axis}&field=${encodedField}&refreshTrigger=${refreshTrigger}&show_colorbar=${showColorbar}&log_scale=${logScale}&cmap=${cmap}&dpi=${dpi || 300}&show_scale_bar=${showScaleBar}`;
       if (coord !== null) {
         url += `&coord=${coord}`;
       }

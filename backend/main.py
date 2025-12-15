@@ -297,24 +297,28 @@ def get_fields():
     global ds
     if ds is None:
         raise HTTPException(status_code=400, detail="No dataset loaded")
-    
-    # Add derived fields if not already present
-    if ("gas", "temperature") not in ds.derived_field_list:
-        _add_derived_fields(ds)
-    
-    # Return a list of gas fields (with the custom yt fork, all fields are in the "gas" namespace)
-    # ds.field_list is a list of tuples (field_type, field_name)
-    # We want the field_name for gas fields
-    fields = [f[1] for f in ds.field_list if f[0] == 'gas']
-    
-    # Also include derived fields
-    derived_fields = [f[1] for f in ds.derived_field_list if f[0] == 'gas']
-    
-    # Combine and remove duplicates
-    all_fields = list(set(fields + derived_fields))
-    all_fields.sort()
-    
-    return {"fields": all_fields}
+
+    # Ensure derived fields are available before collecting the list
+    _add_derived_fields(ds)
+
+    combined_fields = list(ds.field_list) + list(ds.derived_field_list)
+    unique_fields = []
+    seen = set()
+
+    for field_entry in combined_fields:
+        if not isinstance(field_entry, (tuple, list)) or len(field_entry) < 2:
+            continue
+
+        namespace = str(field_entry[0]).strip()
+        name = str(field_entry[1]).strip()
+        key = (namespace, name)
+        if key in seen:
+            continue
+
+        seen.add(key)
+        unique_fields.append([namespace, name])
+
+    return {"fields": unique_fields}
 
 
 # Load config for cache size
@@ -323,6 +327,46 @@ try:
     CACHE_MAX_SIZE = _config.get("cache_max_size", 32)
 except Exception:
     CACHE_MAX_SIZE = 32
+
+# Helpers for handling YT field tuples
+def _normalize_field_tuple(field_input):
+    if field_input is None:
+        raise ValueError("Field parameter is required")
+
+    if isinstance(field_input, tuple):
+        source = field_input
+    elif isinstance(field_input, list):
+        source = tuple(field_input)
+    elif isinstance(field_input, str):
+        raw = field_input.strip()
+        if ':' in raw:
+            namespace, name = raw.split(':', 1)
+            return (namespace.strip(), name.strip())
+        return ("gas", raw)
+    else:
+        raise ValueError(f"Cannot interpret field input: {type(field_input)}")
+
+    if len(source) < 2:
+        raise ValueError("Field tuple must have at least two elements")
+
+    namespace = str(source[0]).strip()
+    name = str(source[1]).strip()
+    return (namespace, name)
+
+def _normalize_weight_field(weight_field):
+    if weight_field is None or weight_field == "None":
+        return None
+    if weight_field == "density":
+        return ("gas", "density")
+    if weight_field == "cell_volume":
+        return ("index", "cell_volume")
+    if weight_field == "cell_mass":
+        return ("gas", "cell_mass")
+
+    try:
+        return _normalize_field_tuple(weight_field)
+    except ValueError:
+        return ("gas", str(weight_field))
 
 # Core implementation without caching
 def _generate_plot_image_impl(
@@ -381,22 +425,15 @@ def _generate_plot_image_impl(
     # Add derived fields if they are not already present (in case ds was loaded but fields not added)
     # This check is cheap
     if ("gas", "temperature") not in ds.derived_field_list:
-         _add_derived_fields(ds)
+        _add_derived_fields(ds)
 
-    # With the custom yt fork, all fields are defined as ("gas", field_name)
-    field_tuple = ("gas", field)
+    # Normalize field identifier into a YT field tuple
+    field_tuple = _normalize_field_tuple(field)
     
     # Handle weight field for projections
     weight = None
-    if kind == "prj" and weight_field and weight_field != "None":
-        if weight_field == "density":
-            weight = ("gas", "density")
-        elif weight_field == "cell_volume":
-            weight = ("index", "cell_volume")  # Standard yt field for cell volume
-        elif weight_field == "cell_mass":
-            weight = ("gas", "cell_mass")
-        else:
-            weight = ("gas", weight_field)
+    if kind == "prj":
+        weight = _normalize_weight_field(weight_field)
 
     # Create plot object
     if kind == "slc":
@@ -1069,29 +1106,6 @@ def get_slice(
         print(f"Error generating plot: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/fields")
-def get_fields():
-    global ds
-    if ds is None:
-        raise HTTPException(status_code=400, detail="No dataset loaded")
-    
-    # Ensure derived fields are added
-    _add_derived_fields(ds)
-    
-    # Return a list of fluid fields
-    # We want boxlib fields + our derived fields
-    fields = [f[1] for f in ds.field_list if f[0] == 'boxlib']
-    
-    # Add our derived fields if they exist
-    derived_fields = ["temperature", "velocity_magnitude", "number_density"]
-    for df in derived_fields:
-        if ("gas", df) in ds.derived_field_list:
-            fields.append(df)
-            
-    # Sort and unique
-    fields = sorted(list(set(fields)))
-    return {"fields": fields}
 
 @app.get("/api/particle_types")
 def get_particle_types():
