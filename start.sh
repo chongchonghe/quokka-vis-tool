@@ -3,6 +3,8 @@
 
 set -e
 
+source ~/rc/quokka-vis-tool.rc
+
 # Colors
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -11,7 +13,7 @@ NC='\033[0m'
 
 # Configuration
 BACKEND_PORT=9010
-VENV_PATH="$HOME/softwares-setonix/python-envs/uv-quokka-vis-tool"
+VENV_PATH="$HOME/softwares/python-envs/uv-quokka-vis-tool"
 LOG_DIR="$HOME/scripts/logs/quokka-vis-tool"
 
 # Find script directory (works even when called from elsewhere)

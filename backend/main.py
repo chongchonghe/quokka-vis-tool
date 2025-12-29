@@ -439,7 +439,9 @@ def _generate_plot_image_impl(
     if kind == "slc":
         slc = yt.SlicePlot(ds, axis, field_tuple, center=ds.domain_center)
     elif kind == "prj":
-        slc = yt.ProjectionPlot(ds, axis, field_tuple, weight_field=weight, center=ds.domain_center)
+        ad = ds.all_data()
+        ad.max_level = ds.max_level
+        slc = yt.ProjectionPlot(ad, axis, field_tuple, weight_field=weight, center=ds.domain_center)
     elif kind == "vol":
         # Volume rendering
         # We handle this separately because it returns a scene, not a plot container like SlicePlot
