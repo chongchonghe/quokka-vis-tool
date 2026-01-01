@@ -1,6 +1,7 @@
 /data/
 *.png
 gitignored-*
+.gemini/
 
 # General
 .DS_Store
