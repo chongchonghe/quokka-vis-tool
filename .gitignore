@@ -2,6 +2,7 @@
 *.png
 gitignored-*
 .gemini/
+backend/external/
 
 # General
 .DS_Store
